@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Монитор Лента - Саша</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="password-screen">
+        <h1>Монитор Лента</h1>
+        <input type="password" id="password-input" placeholder="Введите пароль">
+        <button onclick="checkPassword()">Войти</button>
+    </div>
+
+    <div id="app" style="display: none;">
+        <div id="stats-bar">
+            <span id="stats-summary">📊 За 14 дней: ...</span>
+            <div class="stats-actions">
+                <button class="btn-icon" onclick="toggleDashboard()" title="Дашборд">📈</button>
+                <button class="btn-icon" onclick="showCalendar()" title="Календарь">📅</button>
+            </div>
+        </div>
+
+        <div id="map"></div>
+
+        <div id="tk-panel" class="hidden">
+            <button class="btn-close" onclick="hideTKPanel()" title="Закрыть">×</button>
+            <div id="tk-info"></div>
+        </div>
+
+        <div id="dashboard" class="hidden">
+            <button class="btn-close btn-close-dash" onclick="toggleDashboard()">×</button>
+            <div class="dashboard-content">
+                <h3>Дашборд</h3>
+                <canvas id="stats-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

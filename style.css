@@ -1,0 +1,474 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --color-primary: #10B981;
+    --color-primary-hover: #059669;
+    --color-secondary: #3B82F6;
+    --color-secondary-hover: #2563EB;
+    --color-surface: #F8FAFC;
+    --color-border: #E2E8F0;
+    --color-text: #1E293B;
+    --color-text-muted: #64748B;
+    --radius: 10px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-hover: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    color: var(--color-text);
+}
+
+#password-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+#password-screen h1 {
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+#password-input {
+    margin: 20px 0;
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    border: none;
+    width: 220px;
+    font-size: 16px;
+    box-shadow: var(--shadow);
+}
+
+#password-screen button {
+    padding: 14px 28px;
+    border-radius: var(--radius);
+    border: none;
+    background: white;
+    color: #667eea;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 15px;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+#password-screen button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-hover);
+}
+
+#app {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#stats-bar {
+    padding: 12px 16px;
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+    box-shadow: var(--shadow);
+}
+
+.stats-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    cursor: pointer;
+    font-size: 18px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-icon:hover {
+    background: white;
+    border-color: var(--color-primary);
+}
+
+#map {
+    flex: 1;
+    min-height: 0;
+}
+
+#tk-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    padding: 24px 24px 28px;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+    max-height: 72vh;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.btn-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-close:hover {
+    background: var(--color-border);
+    color: var(--color-text);
+}
+
+.btn-close-dash {
+    top: 12px;
+    right: 12px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.leaflet-marker-icon.custom-marker {
+    background: none !important;
+    border: none !important;
+}
+
+.marker-tooltip {
+    background: white !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-sm) !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    box-shadow: var(--shadow-hover) !important;
+}
+
+.marker {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    transition: transform 0.15s;
+}
+
+.marker:hover {
+    transform: scale(1.1);
+}
+
+.marker-green {
+    background: var(--color-primary);
+}
+
+.marker-blue {
+    background: var(--color-secondary);
+}
+
+.marker-gray {
+    background: #94A3B8;
+}
+
+#tk-panel h3 {
+    margin-bottom: 8px;
+    font-size: 20px;
+}
+
+.tk-address {
+    font-size: 14px;
+    color: var(--color-text-muted);
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.tk-offices {
+    background: var(--color-surface);
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 16px;
+    font-size: 14px;
+    border: 1px solid var(--color-border);
+}
+
+.current-status {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+}
+
+.status-badge.active {
+    background: #D1FAE5;
+    color: #065F46;
+    border-color: var(--color-primary);
+}
+
+.history-block {
+    margin-bottom: 20px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.history-header {
+    padding: 12px 16px;
+    background: var(--color-surface);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    transition: background 0.15s;
+}
+
+.history-header:hover {
+    background: #EEF2F7;
+}
+
+.history-count {
+    color: var(--color-text-muted);
+    font-weight: 400;
+}
+
+.history-chevron {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--color-text-muted);
+}
+
+.history-content {
+    padding: 12px 16px;
+    max-height: 200px;
+    overflow-y: auto;
+    transition: max-height 0.2s ease;
+}
+
+.history-content.collapsed {
+    max-height: 0;
+    padding: 0 16px;
+    overflow: hidden;
+}
+
+.visit-item {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 14px;
+}
+
+.visit-item:last-child {
+    border-bottom: none;
+}
+
+.no-data {
+    color: var(--color-text-muted);
+    font-size: 14px;
+}
+
+.task-block {
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #FEF3C7;
+    border-radius: var(--radius);
+    border: 1px solid #FCD34D;
+}
+
+.task-block h4 {
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.task-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.panel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn {
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-hover);
+}
+
+.btn-secondary {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover {
+    background: white;
+    border-color: var(--color-secondary);
+    color: var(--color-secondary);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--color-text-muted);
+}
+
+.btn-ghost:hover {
+    background: var(--color-surface);
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal {
+    background: white;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    max-width: 90%;
+    width: 400px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal h3 {
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+.modal input[type="date"],
+.modal textarea {
+    width: 100%;
+    margin: 10px 0;
+    padding: 12px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+}
+
+.modal input:focus,
+.modal textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.modal label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 12px 0;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+#dashboard {
+    position: fixed;
+    top: 50px;
+    left: 16px;
+    right: 16px;
+    bottom: 100px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: var(--shadow-hover);
+    z-index: 500;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+#dashboard canvas {
+    max-height: 300px;
+}
+
+@media (max-width: 768px) {
+    #stats-summary {
+        font-size: 13px;
+    }
+    
+    #tk-panel {
+        padding: 20px 20px 24px;
+    }
+    
+    .panel-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
