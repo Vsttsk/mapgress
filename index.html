@@ -18,8 +18,13 @@
         <div id="stats-bar">
             <span id="stats-summary">📊 За 14 дней: ...</span>
             <div class="stats-actions">
+                <button class="btn-icon" id="editor-btn" onclick="toggleEditorMode()" title="Редактор">✏️</button>
                 <button class="btn-icon" onclick="toggleDashboard()" title="Дашборд">📈</button>
                 <button class="btn-icon" onclick="showCalendar()" title="Календарь">📅</button>
+            </div>
+            <div id="editor-bar" class="hidden">
+                <span>Режим редактора</span>
+                <button class="btn btn-primary" onclick="finishEditing()">Готово</button>
             </div>
         </div>
 
