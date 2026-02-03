@@ -5,8 +5,10 @@ let tasks = [];
 let plans = [];
 let markers = {};
 let statsChart = null;
+let editorMode = false;
+let activeMarker = null;
 
-const COLORS = { OUR: 'green', OTHER: 'blue', NONE: 'gray' };
+const COLORS = { OUR: 'green', OTHER: 'blue', NONE: 'gray', EDIT: 'orange' };
 
 function parseCSVLine(line) {
     const result = [];
@@ -100,6 +102,8 @@ async function loadData() {
     const csvText = await response.text();
     stores = parseCSV(csvText);
     
+    await loadSavedPositions();
+    
     visits = await localforage.getItem('visits') || [];
     tasks = await localforage.getItem('tasks') || [];
     plans = await localforage.getItem('plans') || [];
@@ -112,27 +116,117 @@ function initMap() {
     }).addTo(map);
     
     stores.forEach(store => {
-        const color = getMarkerColor(store.tk_number);
-        const officesLabel = getOfficesLabel(store);
-        
-        const marker = L.marker([store.lat, store.lng], {
-            icon: L.divIcon({
-                html: `<div class="marker marker-${color}" data-tk="${store.tk_number}" title="${officesLabel}">${store.tk_number}</div>`,
-                className: 'custom-marker',
-                iconSize: [36, 36]
-            })
-        }).addTo(map);
-        
-        marker.bindTooltip(`<strong>ТК ${store.tk_number}</strong><br>${officesLabel}`, {
-            permanent: false,
-            direction: 'top',
-            className: 'marker-tooltip',
-            offset: [0, -20]
-        });
-        
-        marker.on('click', () => showTKPanel(store.tk_number));
-        markers[store.tk_number] = marker;
+        createMarker(store);
     });
+}
+
+function createMarker(store) {
+    const color = getMarkerColor(store.tk_number);
+    const officesLabel = getOfficesLabel(store);
+    
+    const marker = L.marker([store.lat, store.lng], {
+        icon: L.divIcon({
+            html: `<div class="marker marker-${color}" data-tk="${store.tk_number}" title="${officesLabel}">${store.tk_number}</div>`,
+            className: 'custom-marker',
+            iconSize: [36, 36]
+        }),
+        draggable: editorMode
+    }).addTo(map);
+    
+    marker.bindTooltip(`<strong>ТК ${store.tk_number}</strong><br>${officesLabel}`, {
+        permanent: false,
+        direction: 'top',
+        className: 'marker-tooltip',
+        offset: [0, -20]
+    });
+    
+    marker.on('click', () => {
+        if (editorMode) {
+            activateMarker(store.tk_number);
+        } else {
+            showTKPanel(store.tk_number);
+        }
+    });
+    
+    if (editorMode) {
+        marker.on('dragend', () => saveMarkerPosition(store.tk_number, marker));
+    }
+    
+    markers[store.tk_number] = marker;
+}
+
+function activateMarker(tkNumber) {
+    if (!editorMode) return;
+    
+    // Деактивируем предыдущий активный маркер
+    if (activeMarker && activeMarker !== tkNumber) {
+        const prevMarker = markers[activeMarker];
+        if (prevMarker) {
+            const color = getMarkerColor(activeMarker);
+            updateMarkerVisual(activeMarker, color);
+            prevMarker.draggable = false;
+        }
+    }
+    
+    // Если кликнули на уже активный маркер - деактивируем
+    if (activeMarker === tkNumber) {
+        const color = getMarkerColor(tkNumber);
+        updateMarkerVisual(tkNumber, color);
+        markers[tkNumber].draggable = false;
+        activeMarker = null;
+        return;
+    }
+    
+    // Активируем новый маркер
+    activeMarker = tkNumber;
+    const marker = markers[tkNumber];
+    if (marker) {
+        marker.draggable = true;
+        updateMarkerVisual(tkNumber, 'orange');
+    }
+}
+
+function updateMarkerVisual(tkNumber, color) {
+    const marker = markers[tkNumber];
+    if (!marker) return;
+    
+    const store = stores.find(s => s.tk_number == tkNumber);
+    const officesLabel = getOfficesLabel(store);
+    
+    marker.setIcon(L.divIcon({
+        html: `<div class="marker marker-${color}" data-tk="${tkNumber}" title="${officesLabel}">${tkNumber}</div>`,
+        className: 'custom-marker',
+        iconSize: [36, 36]
+    }));
+}
+
+async function saveMarkerPosition(tkNumber, marker) {
+    const store = stores.find(s => s.tk_number == tkNumber);
+    if (!store) return;
+    
+    const latlng = marker.getLatLng();
+    store.lat = latlng.lat;
+    store.lng = latlng.lng;
+    
+    // Сохраняем в LocalStorage
+    await localforage.setItem('store_positions', stores.map(s => ({
+        tk: s.tk_number,
+        lat: s.lat,
+        lng: s.lng
+    })));
+}
+
+async function loadSavedPositions() {
+    const saved = await localforage.getItem('store_positions');
+    if (saved) {
+        saved.forEach(pos => {
+            const store = stores.find(s => s.tk_number == pos.tk);
+            if (store) {
+                store.lat = pos.lat;
+                store.lng = pos.lng;
+            }
+        });
+    }
 }
 
 function hideTKPanel() {
@@ -354,6 +448,52 @@ function renderDashboard() {
 
 function showCalendar() {
     alert('Календарь визитов — в разработке');
+}
+
+function toggleEditorMode() {
+    if (editorMode) {
+        finishEditing();
+        return;
+    }
+    
+    const password = prompt('Введите пароль для режима редактора:');
+    if (password !== CONFIG.PASSWORD) {
+        alert('Неверный пароль');
+        return;
+    }
+    
+    editorMode = true;
+    document.getElementById('editor-btn').classList.add('active');
+    document.getElementById('editor-bar').classList.remove('hidden');
+    document.getElementById('stats-bar').classList.add('editor-active');
+    document.getElementById('app').classList.add('editor-mode');
+    
+    // Пересоздаём маркеры с возможностью перетаскивания
+    Object.keys(markers).forEach(tk => {
+        map.removeLayer(markers[tk]);
+    });
+    markers = {};
+    stores.forEach(store => {
+        createMarker(store);
+    });
+}
+
+function finishEditing() {
+    editorMode = false;
+    activeMarker = null;
+    document.getElementById('editor-btn').classList.remove('active');
+    document.getElementById('editor-bar').classList.add('hidden');
+    document.getElementById('stats-bar').classList.remove('editor-active');
+    document.getElementById('app').classList.remove('editor-mode');
+    
+    // Пересоздаём маркеры в обычном режиме
+    Object.keys(markers).forEach(tk => {
+        map.removeLayer(markers[tk]);
+    });
+    markers = {};
+    stores.forEach(store => {
+        createMarker(store);
+    });
 }
 
 async function initApp() {
