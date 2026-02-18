@@ -13,17 +13,26 @@
     --color-border: #E2E8F0;
     --color-text: #1E293B;
     --color-text-muted: #64748B;
-    --radius: 10px;
-    --radius-sm: 8px;
+    --radius: 12px;
+    --radius-sm: 10px;
     --shadow: 0 1px 3px rgba(0,0,0,0.08);
     --shadow-hover: 0 4px 12px rgba(0,0,0,0.12);
+    --touch-target: 44px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
 }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    touch-action: pan-x pan-y;
 }
 
 #password-screen {
@@ -32,41 +41,65 @@ body {
     align-items: center;
     justify-content: center;
     height: 100vh;
+    height: 100dvh;
     padding: 20px;
+    padding-top: calc(20px + var(--safe-top));
+    padding-bottom: calc(20px + var(--safe-bottom));
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
 }
 
 #password-screen h1 {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     font-weight: 600;
+    font-size: 28px;
+    text-align: center;
 }
 
 #password-input {
     margin: 20px 0;
-    padding: 14px 18px;
+    padding: 16px 20px;
     border-radius: var(--radius);
     border: none;
-    width: 220px;
+    width: 100%;
+    max-width: 280px;
     font-size: 16px;
     box-shadow: var(--shadow);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+#password-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
 }
 
 #password-screen button {
-    padding: 14px 28px;
+    padding: 16px 32px;
+    min-height: var(--touch-target);
     border-radius: var(--radius);
     border: none;
     background: white;
     color: #667eea;
     font-weight: 600;
     cursor: pointer;
-    font-size: 15px;
+    font-size: 16px;
     transition: transform 0.15s, box-shadow 0.15s;
+    width: 100%;
+    max-width: 280px;
+    -webkit-tap-highlight-color: transparent;
 }
 
-#password-screen button:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-hover);
+#password-screen button:active {
+    transform: scale(0.98);
+    box-shadow: var(--shadow);
+}
+
+@media (hover: hover) {
+    #password-screen button:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-hover);
+    }
 }
 
 #app {
@@ -85,6 +118,9 @@ body {
 
 #stats-bar {
     padding: 12px 16px;
+    padding-top: calc(12px + var(--safe-top));
+    padding-left: calc(16px + var(--safe-left));
+    padding-right: calc(16px + var(--safe-right));
     background: white;
     display: flex;
     justify-content: space-between;
@@ -92,28 +128,53 @@ body {
     border-bottom: 1px solid var(--color-border);
     flex-shrink: 0;
     box-shadow: var(--shadow);
+    gap: 12px;
+}
+
+#stats-summary {
+    flex: 1;
+    font-size: 13px;
+    line-height: 1.4;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .stats-actions {
     display: flex;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .btn-icon {
-    width: 40px;
-    height: 40px;
+    width: var(--touch-target);
+    height: var(--touch-target);
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
     padding: 0;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background: var(--color-surface);
     cursor: pointer;
-    font-size: 18px;
-    transition: background 0.15s, border-color 0.15s;
+    font-size: 20px;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
-.btn-icon:hover {
+.btn-icon:active {
+    transform: scale(0.95);
     background: white;
-    border-color: var(--color-primary);
+}
+
+@media (hover: hover) {
+    .btn-icon:hover {
+        background: white;
+        border-color: var(--color-primary);
+    }
 }
 
 .btn-icon.active {
@@ -129,10 +190,12 @@ body {
 
 #editor-bar {
     position: fixed;
-    top: 64px;
+    top: calc(64px + var(--safe-top));
     left: 0;
     right: 0;
     padding: 12px 16px;
+    padding-left: calc(16px + var(--safe-left));
+    padding-right: calc(16px + var(--safe-right));
     background: #FEF3C7;
     border-bottom: 2px solid #F59E0B;
     display: flex;
@@ -140,16 +203,36 @@ body {
     align-items: center;
     z-index: 999;
     box-shadow: var(--shadow);
+    gap: 12px;
 }
 
 #editor-bar span {
     font-weight: 600;
     color: #92400E;
+    font-size: 14px;
+}
+
+#editor-bar .btn {
+    flex-shrink: 0;
+    padding: 10px 20px;
+    min-height: var(--touch-target);
 }
 
 #map {
     flex: 1;
     min-height: 0;
+    width: 100%;
+    height: 100%;
+    touch-action: pan-x pan-y pinch-zoom;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    z-index: 1;
+}
+
+.leaflet-container {
+    touch-action: pan-x pan-y pinch-zoom;
+    width: 100% !important;
+    height: 100% !important;
 }
 
 #tk-panel {
@@ -158,34 +241,54 @@ body {
     left: 0;
     right: 0;
     background: white;
-    padding: 24px 24px 28px;
-    border-radius: 24px 24px 0 0;
+    padding: 20px 16px;
+    padding-bottom: calc(20px + var(--safe-bottom));
+    padding-left: calc(16px + var(--safe-left));
+    padding-right: calc(16px + var(--safe-right));
+    border-radius: 20px 20px 0 0;
     box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
-    max-height: 72vh;
+    max-height: 75vh;
+    max-height: 75dvh;
     overflow-y: auto;
     z-index: 1000;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .btn-close {
     position: absolute;
     top: 16px;
-    right: 16px;
-    width: 36px;
-    height: 36px;
+    right: calc(16px + var(--safe-right));
+    width: var(--touch-target);
+    height: var(--touch-target);
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
     padding: 0;
     border: none;
     border-radius: 50%;
     background: var(--color-surface);
     color: var(--color-text-muted);
-    font-size: 24px;
+    font-size: 28px;
     line-height: 1;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
-.btn-close:hover {
+.btn-close:active {
+    transform: scale(0.9);
     background: var(--color-border);
-    color: var(--color-text);
+}
+
+@media (hover: hover) {
+    .btn-close:hover {
+        background: var(--color-border);
+        color: var(--color-text);
+    }
 }
 
 .btn-close-dash {
@@ -206,14 +309,20 @@ body {
     background: white !important;
     border: 1px solid var(--color-border) !important;
     border-radius: var(--radius-sm) !important;
-    padding: 8px 12px !important;
-    font-size: 13px !important;
+    padding: 10px 14px !important;
+    font-size: 14px !important;
     box-shadow: var(--shadow-hover) !important;
+    pointer-events: none !important;
+    max-width: 200px !important;
+    text-align: center !important;
+    line-height: 1.4 !important;
 }
 
 .marker {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -221,13 +330,21 @@ body {
     color: white;
     font-weight: 600;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 13px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.25);
     transition: transform 0.15s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.marker:hover {
-    transform: scale(1.1);
+.marker:active {
+    transform: scale(1.15);
+}
+
+@media (hover: hover) {
+    .marker:hover {
+        transform: scale(1.1);
+    }
 }
 
 .marker-green {
@@ -260,13 +377,16 @@ body {
 #tk-panel h3 {
     margin-bottom: 8px;
     font-size: 20px;
+    font-weight: 600;
+    padding-right: 50px;
 }
 
 .tk-address {
     font-size: 14px;
     color: var(--color-text-muted);
     margin-bottom: 12px;
-    line-height: 1.4;
+    line-height: 1.5;
+    word-break: break-word;
 }
 
 .tk-offices {
@@ -349,10 +469,16 @@ body {
     padding: 8px 0;
     border-bottom: 1px solid var(--color-border);
     font-size: 14px;
+    line-height: 1.5;
 }
 
 .visit-item:last-child {
     border-bottom: none;
+}
+
+.visit-user {
+    font-weight: 600;
+    color: var(--color-primary);
 }
 
 .no-data {
@@ -383,19 +509,26 @@ body {
 
 .panel-actions {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-direction: column;
+    gap: 12px;
     margin-top: 20px;
 }
 
 .btn {
-    padding: 12px 20px;
+    padding: 14px 20px;
+    min-height: var(--touch-target);
     border-radius: var(--radius);
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s;
     border: none;
+    width: 100%;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-primary {
@@ -403,10 +536,17 @@ body {
     color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:active {
     background: var(--color-primary-hover);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-hover);
+    transform: scale(0.98);
+}
+
+@media (hover: hover) {
+    .btn-primary:hover {
+        background: var(--color-primary-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-hover);
+    }
 }
 
 .btn-secondary {
@@ -415,10 +555,19 @@ body {
     border: 1px solid var(--color-border);
 }
 
-.btn-secondary:hover {
+.btn-secondary:active {
     background: white;
     border-color: var(--color-secondary);
     color: var(--color-secondary);
+    transform: scale(0.98);
+}
+
+@media (hover: hover) {
+    .btn-secondary:hover {
+        background: white;
+        border-color: var(--color-secondary);
+        color: var(--color-secondary);
+    }
 }
 
 .btn-ghost {
@@ -426,8 +575,14 @@ body {
     color: var(--color-text-muted);
 }
 
-.btn-ghost:hover {
+.btn-ghost:active {
     background: var(--color-surface);
+}
+
+@media (hover: hover) {
+    .btn-ghost:hover {
+        background: var(--color-surface);
+    }
 }
 
 .modal-overlay {
@@ -436,23 +591,29 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.4);
+    background: rgba(0,0,0,0.5);
     z-index: 2000;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
-    padding: 20px;
+    padding: 0;
+    padding-bottom: var(--safe-bottom);
+    -webkit-tap-highlight-color: transparent;
 }
 
 .modal {
     background: white;
-    padding: 24px;
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-    max-width: 90%;
-    width: 400px;
-    max-height: 90vh;
+    padding: 24px 20px;
+    padding-bottom: calc(24px + var(--safe-bottom));
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 100%;
+    max-height: 85vh;
+    max-height: 85dvh;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .modal h3 {
@@ -464,10 +625,13 @@ body {
 .modal textarea {
     width: 100%;
     margin: 10px 0;
-    padding: 12px 14px;
+    padding: 14px 16px;
+    min-height: var(--touch-target);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    font-size: 15px;
+    font-size: 16px;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .modal input:focus,
@@ -479,50 +643,111 @@ body {
 .modal label {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin: 12px 0;
+    gap: 12px;
+    margin: 14px 0;
     cursor: pointer;
-    font-size: 15px;
+    font-size: 16px;
+    min-height: var(--touch-target);
+    padding: 4px 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.modal label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .modal-actions {
     display: flex;
-    gap: 10px;
-    margin-top: 20px;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 24px;
 }
 
 #dashboard {
     position: fixed;
-    top: 50px;
-    left: 16px;
-    right: 16px;
-    bottom: 100px;
+    top: calc(64px + var(--safe-top));
+    left: 0;
+    right: 0;
+    bottom: calc(100px + var(--safe-bottom));
     background: white;
-    border-radius: 16px;
+    border-radius: 0;
     box-shadow: var(--shadow-hover);
     z-index: 500;
-    padding: 24px;
+    padding: 20px 16px;
+    padding-left: calc(16px + var(--safe-left));
+    padding-right: calc(16px + var(--safe-right));
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 #dashboard canvas {
     max-height: 300px;
+    width: 100% !important;
 }
 
-@media (max-width: 768px) {
+.history-header {
+    min-height: var(--touch-target);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.history-header:active {
+    background: #EEF2F7;
+}
+
+@media (hover: hover) {
+    .history-header:hover {
+        background: #EEF2F7;
+    }
+}
+
+@media (min-width: 768px) {
     #stats-summary {
-        font-size: 13px;
+        font-size: 14px;
     }
     
-    #tk-panel {
-        padding: 20px 20px 24px;
+    .modal-overlay {
+        align-items: center;
+        padding: 20px;
+    }
+    
+    .modal {
+        border-radius: 16px;
+        max-width: 500px;
+        padding: 24px;
+        padding-bottom: 24px;
+    }
+    
+    .modal-actions {
+        flex-direction: row;
     }
     
     .panel-actions {
-        flex-direction: column;
+        flex-direction: row;
     }
     
     .btn {
-        width: 100%;
+        width: auto;
+    }
+    
+    #dashboard {
+        top: 80px;
+        left: 16px;
+        right: 16px;
+        bottom: 100px;
+        border-radius: 16px;
+    }
+    
+    #tk-panel {
+        max-width: 500px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-radius: 20px;
     }
 }

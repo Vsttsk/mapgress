@@ -4,6 +4,7 @@ const CONFIG = {
     MAP_CENTER: [55.75, 37.61],
     MAP_ZOOM: 10,
     OUR_OFFICE: "Максутов",
+    USER_NAME: "Менеджер", // Можно изменить на имя конкретного менеджера
     COLORS: {
         OUR: '#10B981',
         OTHER: '#3B82F6',

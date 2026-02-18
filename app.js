@@ -98,39 +98,109 @@ function updateMarkerColor(tkNumber) {
 }
 
 async function loadData() {
-    const response = await fetch('stores_final.csv');
-    const csvText = await response.text();
-    stores = parseCSV(csvText);
-    
-    await loadSavedPositions();
-    
-    visits = await localforage.getItem('visits') || [];
-    tasks = await localforage.getItem('tasks') || [];
-    plans = await localforage.getItem('plans') || [];
+    try {
+        // Проверка, что мы не на file:// протоколе
+        if (window.location.protocol === 'file:') {
+            alert('⚠️ Файл открыт напрямую!\n\nПожалуйста, используйте локальный сервер:\n\n1. Откройте терминал\n2. Выполните: cd ' + window.location.pathname.split('/').slice(0, -1).join('/') + '\n3. Выполните: python3 -m http.server 8080\n4. Откройте: http://localhost:8080\n\nИли используйте уже запущенный сервер на http://localhost:8080');
+            throw new Error('File protocol not supported');
+        }
+        
+        const response = await fetch('stores_final.csv');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const csvText = await response.text();
+        stores = parseCSV(csvText);
+        
+        if (stores.length === 0) {
+            console.error('No stores loaded from CSV');
+            return;
+        }
+        
+        await loadSavedPositions();
+        
+        // Загружаем данные с сервера (из файла проекта)
+        await loadDataFromServer();
+        
+        // Если сервер недоступен, используем LocalStorage как fallback
+        if (visits.length === 0 && tasks.length === 0 && plans.length === 0) {
+            visits = await localforage.getItem('visits') || [];
+            tasks = await localforage.getItem('tasks') || [];
+            plans = await localforage.getItem('plans') || [];
+        }
+    } catch (error) {
+        console.error('Error loading data:', error);
+        if (error.message !== 'File protocol not supported') {
+            alert('Ошибка загрузки данных. Проверьте консоль браузера.');
+        }
+    }
 }
 
 function initMap() {
-    map = L.map('map').setView([55.75, 37.61], 10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
+    const mapElement = document.getElementById('map');
+    if (!mapElement) {
+        console.error('Map element not found');
+        return;
+    }
     
-    stores.forEach(store => {
-        createMarker(store);
-    });
+    try {
+        const isMobile = window.innerWidth < 768;
+        
+        map = L.map('map', {
+            center: [55.75, 37.61],
+            zoom: isMobile ? 9 : 10,
+            zoomControl: true,
+            touchZoom: true,
+            doubleClickZoom: true,
+            boxZoom: false,
+            keyboard: true,
+            scrollWheelZoom: true,
+            tap: true,
+            tapTolerance: 15
+        });
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 19,
+            minZoom: 5
+        }).addTo(map);
+        
+        if (stores && stores.length > 0) {
+            stores.forEach(store => {
+                createMarker(store);
+            });
+        } else {
+            console.error('No stores to display');
+        }
+        
+        // Принудительное обновление размера карты после небольшой задержки
+        setTimeout(() => {
+            if (map) {
+                map.invalidateSize();
+            }
+        }, 100);
+    } catch (error) {
+        console.error('Error initializing map:', error);
+        alert('Ошибка инициализации карты: ' + error.message);
+    }
 }
 
 function createMarker(store) {
     const color = getMarkerColor(store.tk_number);
     const officesLabel = getOfficesLabel(store);
     
+    const isMobile = window.innerWidth < 768;
+    const markerSize = isMobile ? 40 : 36;
+    
     const marker = L.marker([store.lat, store.lng], {
         icon: L.divIcon({
             html: `<div class="marker marker-${color}" data-tk="${store.tk_number}" title="${officesLabel}">${store.tk_number}</div>`,
             className: 'custom-marker',
-            iconSize: [36, 36]
+            iconSize: [markerSize, markerSize],
+            iconAnchor: [markerSize / 2, markerSize / 2]
         }),
-        draggable: editorMode
+        draggable: editorMode,
+        keyboard: true
     }).addTo(map);
     
     marker.bindTooltip(`<strong>ТК ${store.tk_number}</strong><br>${officesLabel}`, {
@@ -193,10 +263,14 @@ function updateMarkerVisual(tkNumber, color) {
     const store = stores.find(s => s.tk_number == tkNumber);
     const officesLabel = getOfficesLabel(store);
     
+    const isMobile = window.innerWidth < 768;
+    const markerSize = isMobile ? 40 : 36;
+    
     marker.setIcon(L.divIcon({
         html: `<div class="marker marker-${color}" data-tk="${tkNumber}" title="${officesLabel}">${tkNumber}</div>`,
         className: 'custom-marker',
-        iconSize: [36, 36]
+        iconSize: [markerSize, markerSize],
+        iconAnchor: [markerSize / 2, markerSize / 2]
     }));
 }
 
@@ -208,7 +282,10 @@ async function saveMarkerPosition(tkNumber, marker) {
     store.lat = latlng.lat;
     store.lng = latlng.lng;
     
-    // Сохраняем в LocalStorage
+    // Сохраняем на сервер (в файл проекта)
+    await saveDataToServer();
+    
+    // Также сохраняем в LocalStorage как кэш
     await localforage.setItem('store_positions', stores.map(s => ({
         tk: s.tk_number,
         lat: s.lat,
@@ -217,6 +294,27 @@ async function saveMarkerPosition(tkNumber, marker) {
 }
 
 async function loadSavedPositions() {
+    // Сначала пытаемся загрузить с сервера
+    try {
+        const response = await fetch('/api/data');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.store_positions && data.store_positions.length > 0) {
+                data.store_positions.forEach(pos => {
+                    const store = stores.find(s => s.tk_number == pos.tk);
+                    if (store) {
+                        store.lat = pos.lat;
+                        store.lng = pos.lng;
+                    }
+                });
+                return;
+            }
+        }
+    } catch (error) {
+        console.log('Server not available, using LocalStorage');
+    }
+    
+    // Fallback на LocalStorage
     const saved = await localforage.getItem('store_positions');
     if (saved) {
         saved.forEach(pos => {
@@ -226,6 +324,61 @@ async function loadSavedPositions() {
                 store.lng = pos.lng;
             }
         });
+    }
+}
+
+async function loadDataFromServer() {
+    try {
+        const response = await fetch('/api/data');
+        if (response.ok) {
+            const data = await response.json();
+            visits = data.visits || [];
+            tasks = data.tasks || [];
+            plans = data.plans || [];
+            
+            // Сохраняем в LocalStorage как кэш
+            await localforage.setItem('visits', visits);
+            await localforage.setItem('tasks', tasks);
+            await localforage.setItem('plans', plans);
+            
+            console.log('✅ Данные загружены с сервера');
+            return true;
+        }
+    } catch (error) {
+        console.log('⚠️ Сервер недоступен, используем LocalStorage');
+        return false;
+    }
+}
+
+async function saveDataToServer() {
+    try {
+        const response = await fetch('/api/data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                visits: visits,
+                tasks: tasks,
+                plans: plans,
+                store_positions: stores.map(s => ({
+                    tk: s.tk_number,
+                    lat: s.lat,
+                    lng: s.lng
+                }))
+            })
+        });
+        
+        if (response.ok) {
+            console.log('✅ Данные сохранены на сервер');
+            return true;
+        } else {
+            console.error('Ошибка сохранения на сервер');
+            return false;
+        }
+    } catch (error) {
+        console.error('Ошибка сохранения на сервер:', error);
+        return false;
     }
 }
 
@@ -245,7 +398,7 @@ function showTKPanel(tkNumber) {
     
     const visitsHtml = storeVisits.length ? storeVisits.map((v, i) => `
         <div class="visit-item">
-            <strong>${v.date}</strong> ${v.user || 'Саша'}: ${v.comment ? `"${v.comment}"` : '—'}
+            <strong>${v.date}</strong> <span class="visit-user">${v.user || CONFIG.USER_NAME}</span>: ${v.comment ? `"${v.comment}"` : '—'}
         </div>
     `).join('') : '<p class="no-data">Нет посещений</p>';
     
@@ -339,13 +492,19 @@ async function saveVisit(tkNumber) {
     const visit = {
         tk: tkNumber,
         date: document.getElementById('visit-date').value,
-        user: 'Саша',
+        user: CONFIG.USER_NAME,
         comment: document.getElementById('visit-comment').value || '',
         our_presence: document.getElementById('our-presence').checked,
-        other_presence: document.getElementById('other-presence').checked
+        other_presence: document.getElementById('other-presence').checked,
+        timestamp: new Date().toISOString()
     };
     
     visits.unshift(visit);
+    
+    // Сохраняем на сервер (в файл проекта)
+    await saveDataToServer();
+    
+    // Также сохраняем в LocalStorage как кэш
     await localforage.setItem('visits', visits);
     
     updateMarkerColor(tkNumber);
@@ -371,9 +530,15 @@ async function savePlan(tkNumber) {
     const plan = {
         tk: tkNumber,
         date: document.getElementById('plan-date').value,
-        note: document.getElementById('plan-note').value || ''
+        note: document.getElementById('plan-note').value || '',
+        timestamp: new Date().toISOString()
     };
     plans.push(plan);
+    
+    // Сохраняем на сервер (в файл проекта)
+    await saveDataToServer();
+    
+    // Также сохраняем в LocalStorage как кэш
     await localforage.setItem('plans', plans);
     closeModal();
 }
@@ -382,6 +547,11 @@ async function completeTask(tkNumber) {
     const task = tasks.find(t => t.tk == tkNumber && !t.done);
     if (task) {
         task.done = true;
+        
+        // Сохраняем на сервер (в файл проекта)
+        await saveDataToServer();
+        
+        // Также сохраняем в LocalStorage как кэш
         await localforage.setItem('tasks', tasks);
         showTKPanel(tkNumber);
     }
@@ -497,14 +667,74 @@ function finishEditing() {
 }
 
 async function initApp() {
-    document.getElementById('password-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'flex';
-    
-    await loadData();
-    initMap();
-    updateStats();
+    try {
+        const passwordScreen = document.getElementById('password-screen');
+        const app = document.getElementById('app');
+        
+        if (!passwordScreen || !app) {
+            console.error('Required DOM elements not found');
+            return;
+        }
+        
+        passwordScreen.style.display = 'none';
+        app.style.display = 'flex';
+        
+        await loadData();
+        
+        if (stores.length === 0) {
+            alert('Не удалось загрузить данные о ТК. Проверьте файл stores_final.csv');
+            return;
+        }
+        
+        initMap();
+        updateStats();
+        
+        // Периодическая синхронизация с сервером (каждые 30 секунд)
+        setInterval(async () => {
+            await loadDataFromServer();
+            // Обновляем маркеры, если позиции изменились
+            Object.keys(markers).forEach(tk => {
+                updateMarkerColor(tk);
+            });
+        }, 30000);
+    } catch (error) {
+        console.error('Error initializing app:', error);
+        alert('Ошибка инициализации приложения: ' + error.message);
+    }
 }
 
-document.getElementById('password-input').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') checkPassword();
+// Инициализация после загрузки DOM
+document.addEventListener('DOMContentLoaded', () => {
+    const passwordInput = document.getElementById('password-input');
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkPassword();
+        });
+    }
+    
+    // Обработка изменения размера экрана
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            if (map) {
+                map.invalidateSize();
+            }
+        }, 250);
+    });
+    
+    // Предотвращение масштабирования при двойном тапе (только для карты)
+    let lastTap = 0;
+    document.addEventListener('touchend', (e) => {
+        // Проверяем, что тап не на интерактивном элементе
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') {
+            return;
+        }
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (tapLength < 300 && tapLength > 0 && e.target.closest('#map')) {
+            e.preventDefault();
+        }
+        lastTap = currentTime;
+    }, false);
 });
