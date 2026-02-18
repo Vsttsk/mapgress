@@ -5,31 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#667eea">
+    <meta name="theme-color" content="#059669">
     <meta name="mobile-web-app-capable" content="yes">
     <style>
-        /* Предотвращение двойного тапа для зума на iOS */
-        * {
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-        input, textarea {
-            -webkit-user-select: text;
-            user-select: text;
-        }
+        * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+        input, textarea { -webkit-user-select: text; user-select: text; }
     </style>
-    <title>Монитор Лента - Саша</title>
+    <title>Монитор Лента</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+    <!-- Экран входа -->
     <div id="password-screen">
+        <div class="auth-logo">🗺️</div>
         <h1>Монитор Лента</h1>
+        <p class="auth-subtitle">Мониторинг торговых точек</p>
         <input type="password" id="password-input" placeholder="Введите пароль">
         <button onclick="checkPassword()">Войти</button>
     </div>
 
+    <!-- Загрузка карты после логина -->
+    <div id="app-loader" class="hidden">
+        <span class="loader-logo">🗺️</span>
+        <div class="spinner"></div>
+        <p>Загрузка карты...</p>
+    </div>
+
+    <!-- Основное приложение -->
     <div id="app" style="display: none;">
         <div id="stats-bar">
             <span id="stats-summary">📊 За 14 дней: ...</span>
@@ -46,17 +50,28 @@
 
         <div id="map"></div>
 
+        <!-- Панель ТК -->
         <div id="tk-panel" class="hidden">
+            <div class="panel-handle"></div>
             <button class="btn-close" onclick="hideTKPanel()" title="Закрыть">×</button>
             <div id="tk-info"></div>
         </div>
 
+        <!-- Дашборд -->
         <div id="dashboard" class="hidden">
             <button class="btn-close btn-close-dash" onclick="toggleDashboard()">×</button>
             <div class="dashboard-content">
                 <h3>Дашборд</h3>
                 <canvas id="stats-chart"></canvas>
             </div>
+        </div>
+    </div>
+
+    <!-- Оверлей ожидания при сохранении -->
+    <div id="loading-overlay" class="hidden">
+        <div class="loading-card">
+            <div class="spinner"></div>
+            <p id="loading-text">Сохранение...</p>
         </div>
     </div>
 

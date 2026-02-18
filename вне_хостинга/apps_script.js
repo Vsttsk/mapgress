@@ -34,6 +34,12 @@ function doPost(e) {
     const data = JSON.parse(e.postData.contents);
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
+    // Лёгкое логирование: просто дописываем строку в лист "log"
+    if (data.action === 'append_visit') {
+      appendVisitLog(ss, data.visit);
+      return jsonResponse({ success: true });
+    }
+
     if (data.visits !== undefined)
       setSheetData(ss, 'visits', data.visits,
         ['tk', 'date', 'user', 'comment', 'our_presence', 'other_presence', 'timestamp']);
@@ -86,6 +92,25 @@ function getSheetData(ss, sheetName) {
     });
     return obj;
   });
+}
+
+// Дописывает строку лога посещения (не перезаписывает, а appendRow)
+function appendVisitLog(ss, visit) {
+  let sheet = ss.getSheetByName('log');
+  if (!sheet) {
+    sheet = ss.insertSheet('log');
+    sheet.appendRow(['время_записи', 'пользователь', 'тк', 'дата_визита', 'наш_офис', 'другой_офис', 'комментарий']);
+    sheet.getRange(1, 1, 1, 7).setFontWeight('bold');
+  }
+  sheet.appendRow([
+    new Date(),
+    String(visit.user  || ''),
+    String(visit.tk    || ''),
+    String(visit.date  || ''),
+    visit.our_presence   ? 'да' : 'нет',
+    visit.other_presence ? 'да' : 'нет',
+    String(visit.comment || '')
+  ]);
 }
 
 // Полностью перезаписывает лист данными из массива объектов

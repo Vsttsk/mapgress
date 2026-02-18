@@ -390,31 +390,49 @@ async function saveDataToServer() {
 }
 
 function showSaveIndicator(success) {
-    const indicator = document.getElementById('save-indicator') || document.createElement('div');
-    indicator.id = 'save-indicator';
-    indicator.textContent = success ? '✅ Сохранено' : '⚠️ Ошибка сохранения';
-    indicator.style.cssText = `
-        position: fixed;
-        top: 70px;
-        right: 16px;
-        padding: 8px 16px;
-        background: ${success ? '#10B981' : '#EF4444'};
-        color: white;
-        border-radius: 8px;
-        font-size: 13px;
-        z-index: 2000;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        animation: slideIn 0.3s ease;
-    `;
-    
-    if (!document.getElementById('save-indicator')) {
+    let indicator = document.getElementById('save-indicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'save-indicator';
         document.body.appendChild(indicator);
+    } else {
+        indicator.style.animation = 'none';
+        indicator.offsetHeight;
+        indicator.style.animation = '';
     }
-    
-    setTimeout(() => {
-        indicator.style.animation = 'slideOut 0.3s ease';
+    indicator.textContent = success ? '✅ Сохранено' : '⚠️ Ошибка';
+    indicator.style.background = success ? '#10B981' : '#EF4444';
+    indicator.style.animation = 'slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+
+    clearTimeout(indicator._t);
+    indicator._t = setTimeout(() => {
+        indicator.style.animation = 'slideOut 0.3s ease forwards';
         setTimeout(() => indicator.remove(), 300);
-    }, 2000);
+    }, 2500);
+}
+
+function showLoadingOverlay(text = 'Сохранение...') {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        document.getElementById('loading-text').textContent = text;
+        overlay.classList.remove('hidden');
+    }
+}
+
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.classList.add('hidden');
+}
+
+async function logVisitToSheets(visit) {
+    if (!CONFIG.SHEETS_API_URL) return;
+    try {
+        fetch(CONFIG.SHEETS_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ action: 'append_visit', visit })
+        });
+    } catch {}
 }
 
 function hideTKPanel() {
@@ -431,9 +449,13 @@ function showTKPanel(tkNumber) {
     const lastVisit = storeVisits[0];
     const officesLabel = getOfficesLabel(store);
     
-    const visitsHtml = storeVisits.length ? storeVisits.map((v, i) => `
+    const visitsHtml = storeVisits.length ? storeVisits.map(v => `
         <div class="visit-item">
-            <strong>${v.date}</strong> <span class="visit-user">${v.user || CONFIG.USER_NAME}</span>: ${v.comment ? `"${v.comment}"` : '—'}
+            <div class="visit-item-header">
+                <span class="visit-date">${v.date}</span>
+                <span class="visit-user">${v.user || CONFIG.USER_NAME}</span>
+            </div>
+            ${v.comment ? `<div class="visit-comment">"${v.comment}"</div>` : ''}
         </div>
     `).join('') : '<p class="no-data">Нет посещений</p>';
     
@@ -524,6 +546,8 @@ function openVisitForm(tkNumber) {
 }
 
 async function saveVisit(tkNumber) {
+    showLoadingOverlay('Сохраняем посещение...');
+
     const visit = {
         tk: tkNumber,
         date: document.getElementById('visit-date').value,
@@ -533,15 +557,13 @@ async function saveVisit(tkNumber) {
         other_presence: document.getElementById('other-presence').checked,
         timestamp: new Date().toISOString()
     };
-    
+
     visits.unshift(visit);
-    
-    // Сохраняем на сервер (в файл проекта)
     await saveDataToServer();
-    
-    // Также сохраняем в LocalStorage как кэш
+    logVisitToSheets(visit);
     await localforage.setItem('visits', visits);
-    
+
+    hideLoadingOverlay();
     updateMarkerColor(tkNumber);
     updateStats();
     closeModal();
@@ -562,6 +584,8 @@ function openPlanForm(tkNumber) {
 }
 
 async function savePlan(tkNumber) {
+    showLoadingOverlay('Сохраняем план...');
+
     const plan = {
         tk: tkNumber,
         date: document.getElementById('plan-date').value,
@@ -569,12 +593,10 @@ async function savePlan(tkNumber) {
         timestamp: new Date().toISOString()
     };
     plans.push(plan);
-    
-    // Сохраняем на сервер (в файл проекта)
     await saveDataToServer();
-    
-    // Также сохраняем в LocalStorage как кэш
     await localforage.setItem('plans', plans);
+
+    hideLoadingOverlay();
     closeModal();
 }
 
@@ -582,12 +604,10 @@ async function completeTask(tkNumber) {
     const task = tasks.find(t => t.tk == tkNumber && !t.done);
     if (task) {
         task.done = true;
-        
-        // Сохраняем на сервер (в файл проекта)
+        showLoadingOverlay('Обновляем задачу...');
         await saveDataToServer();
-        
-        // Также сохраняем в LocalStorage как кэш
         await localforage.setItem('tasks', tasks);
+        hideLoadingOverlay();
         showTKPanel(tkNumber);
     }
 }
@@ -712,15 +732,20 @@ async function initApp() {
         }
         
         passwordScreen.style.display = 'none';
-        app.style.display = 'flex';
-        
+        const appLoader = document.getElementById('app-loader');
+        if (appLoader) appLoader.classList.remove('hidden');
+
         await loadData();
-        
+
         if (stores.length === 0) {
+            if (appLoader) appLoader.classList.add('hidden');
             alert('Не удалось загрузить данные о ТК. Проверьте файл stores_final.csv');
             return;
         }
-        
+
+        if (appLoader) appLoader.classList.add('hidden');
+        app.style.display = 'flex';
+
         initMap();
         updateStats();
         
