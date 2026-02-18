@@ -54,7 +54,7 @@ function isWithinDays(dateString, days) {
     const date = new Date(dateString);
     const now = new Date();
     const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-    return diffDays <= days;
+    return diffDays >= 0 && diffDays <= days;
 }
 
 function hasOurOffice(store) {
@@ -90,11 +90,7 @@ function getMarkerColor(tkNumber) {
 
 function updateMarkerColor(tkNumber) {
     const color = getMarkerColor(tkNumber);
-    const el = document.querySelector(`.marker[data-tk="${tkNumber}"]`);
-    if (el) {
-        el.className = `marker marker-${color}`;
-        el.setAttribute('data-tk', tkNumber);
-    }
+    updateMarkerVisual(tkNumber, color);
 }
 
 async function loadData() {
@@ -117,17 +113,8 @@ async function loadData() {
             return;
         }
         
-        await loadSavedPositions();
-        
-        // Загружаем данные с сервера (из файла проекта)
-        await loadDataFromServer();
-        
-        // Если сервер недоступен, используем LocalStorage как fallback
-        if (visits.length === 0 && tasks.length === 0 && plans.length === 0) {
-            visits = await localforage.getItem('visits') || [];
-            tasks = await localforage.getItem('tasks') || [];
-            plans = await localforage.getItem('plans') || [];
-        }
+        // Один запрос к API — грузим всё сразу (fallback на LocalStorage внутри)
+        await loadAllFromServer();
     } catch (error) {
         console.error('Error loading data:', error);
         if (error.message !== 'File protocol not supported') {
@@ -293,12 +280,18 @@ async function saveMarkerPosition(tkNumber, marker) {
     })));
 }
 
-async function loadSavedPositions() {
+// Единый запрос к API — загружает visits/tasks/plans и позиции маркеров
+async function loadAllFromServer() {
     const apiUrl = CONFIG.SHEETS_API_URL || '/api/data';
     try {
         const response = await fetch(apiUrl);
         if (response.ok) {
             const data = await response.json();
+
+            visits = data.visits || [];
+            tasks  = data.tasks  || [];
+            plans  = data.plans  || [];
+
             if (data.store_positions && data.store_positions.length > 0) {
                 data.store_positions.forEach(pos => {
                     const store = stores.find(s => s.tk_number == pos.tk);
@@ -307,26 +300,35 @@ async function loadSavedPositions() {
                         store.lng = parseFloat(pos.lng) || store.lng;
                     }
                 });
-                return;
+                await localforage.setItem('store_positions', data.store_positions);
             }
+
+            await localforage.setItem('visits', visits);
+            await localforage.setItem('tasks',  tasks);
+            await localforage.setItem('plans',  plans);
+
+            console.log('✅ Данные загружены с', CONFIG.SHEETS_API_URL ? 'Google Sheets' : 'сервера');
+            return true;
         }
     } catch (error) {
-        console.log('API не доступен, используем LocalStorage');
+        console.log('⚠️ API недоступен, используем LocalStorage');
     }
-    
+
     // Fallback на LocalStorage
-    const saved = await localforage.getItem('store_positions');
-    if (saved) {
-        saved.forEach(pos => {
+    const savedPositions = await localforage.getItem('store_positions');
+    if (savedPositions) {
+        savedPositions.forEach(pos => {
             const store = stores.find(s => s.tk_number == pos.tk);
-            if (store) {
-                store.lat = pos.lat;
-                store.lng = pos.lng;
-            }
+            if (store) { store.lat = pos.lat; store.lng = pos.lng; }
         });
     }
+    visits = await localforage.getItem('visits') || [];
+    tasks  = await localforage.getItem('tasks')  || [];
+    plans  = await localforage.getItem('plans')  || [];
+    return false;
 }
 
+// Алиас для 30-секундного поллинга (обновляет только данные, не позиции)
 async function loadDataFromServer() {
     const apiUrl = CONFIG.SHEETS_API_URL || '/api/data';
     try {
@@ -334,20 +336,14 @@ async function loadDataFromServer() {
         if (response.ok) {
             const data = await response.json();
             visits = data.visits || [];
-            tasks = data.tasks || [];
-            plans = data.plans || [];
-            
+            tasks  = data.tasks  || [];
+            plans  = data.plans  || [];
             await localforage.setItem('visits', visits);
-            await localforage.setItem('tasks', tasks);
-            await localforage.setItem('plans', plans);
-            
-            console.log('✅ Данные загружены с', CONFIG.SHEETS_API_URL ? 'Google Sheets' : 'сервера');
+            await localforage.setItem('tasks',  tasks);
+            await localforage.setItem('plans',  plans);
             return true;
         }
-    } catch (error) {
-        console.log('⚠️ API недоступен, используем LocalStorage');
-        return false;
-    }
+    } catch { return false; }
 }
 
 async function saveDataToServer() {
@@ -728,14 +724,13 @@ async function initApp() {
         initMap();
         updateStats();
         
-        // Периодическая синхронизация с сервером (каждые 30 секунд)
-        setInterval(async () => {
-            await loadDataFromServer();
-            // Обновляем маркеры, если позиции изменились
-            Object.keys(markers).forEach(tk => {
-                updateMarkerColor(tk);
-            });
-        }, 30000);
+        // Периодическая синхронизация — только если настроен Google Sheets
+        if (CONFIG.SHEETS_API_URL) {
+            setInterval(async () => {
+                await loadDataFromServer();
+                Object.keys(markers).forEach(tk => updateMarkerColor(tk));
+            }, 30000);
+        }
     } catch (error) {
         console.error('Error initializing app:', error);
         alert('Ошибка инициализации приложения: ' + error.message);
