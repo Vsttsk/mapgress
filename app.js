@@ -370,16 +370,53 @@ async function saveDataToServer() {
         });
         
         if (response.ok) {
-            console.log('✅ Данные сохранены на сервер');
+            const result = await response.json();
+            console.log('✅ Данные сохранены на сервер (в data.json)');
+            showSaveIndicator(true);
             return true;
         } else {
-            console.error('Ошибка сохранения на сервер');
+            const error = await response.text();
+            console.error('Ошибка сохранения на сервер:', error);
+            showSaveIndicator(false);
             return false;
         }
     } catch (error) {
         console.error('Ошибка сохранения на сервер:', error);
+        showSaveIndicator(false);
+        // Fallback: сохраняем только в LocalStorage если сервер недоступен
+        await localforage.setItem('visits', visits);
+        await localforage.setItem('tasks', tasks);
+        await localforage.setItem('plans', plans);
         return false;
     }
+}
+
+function showSaveIndicator(success) {
+    const indicator = document.getElementById('save-indicator') || document.createElement('div');
+    indicator.id = 'save-indicator';
+    indicator.textContent = success ? '✅ Сохранено' : '⚠️ Ошибка сохранения';
+    indicator.style.cssText = `
+        position: fixed;
+        top: 70px;
+        right: 16px;
+        padding: 8px 16px;
+        background: ${success ? '#10B981' : '#EF4444'};
+        color: white;
+        border-radius: 8px;
+        font-size: 13px;
+        z-index: 2000;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        animation: slideIn 0.3s ease;
+    `;
+    
+    if (!document.getElementById('save-indicator')) {
+        document.body.appendChild(indicator);
+    }
+    
+    setTimeout(() => {
+        indicator.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => indicator.remove(), 300);
+    }, 2000);
 }
 
 function hideTKPanel() {
