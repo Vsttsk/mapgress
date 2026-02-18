@@ -288,6 +288,9 @@ async function loadAllFromServer() {
         if (response.ok) {
             const data = await response.json();
 
+            // Если Apps Script вернул ошибку — падаем в fallback на LocalStorage
+            if (data.error) throw new Error(data.error);
+
             visits = data.visits || [];
             tasks  = data.tasks  || [];
             plans  = data.plans  || [];
@@ -311,7 +314,7 @@ async function loadAllFromServer() {
             return true;
         }
     } catch (error) {
-        console.log('⚠️ API недоступен, используем LocalStorage');
+        console.log('⚠️ API недоступен или вернул ошибку:', error.message);
     }
 
     // Fallback на LocalStorage
