@@ -294,24 +294,24 @@ async function saveMarkerPosition(tkNumber, marker) {
 }
 
 async function loadSavedPositions() {
-    // Сначала пытаемся загрузить с сервера
+    const apiUrl = CONFIG.SHEETS_API_URL || '/api/data';
     try {
-        const response = await fetch('/api/data');
+        const response = await fetch(apiUrl);
         if (response.ok) {
             const data = await response.json();
             if (data.store_positions && data.store_positions.length > 0) {
                 data.store_positions.forEach(pos => {
                     const store = stores.find(s => s.tk_number == pos.tk);
                     if (store) {
-                        store.lat = pos.lat;
-                        store.lng = pos.lng;
+                        store.lat = parseFloat(pos.lat) || store.lat;
+                        store.lng = parseFloat(pos.lng) || store.lng;
                     }
                 });
                 return;
             }
         }
     } catch (error) {
-        console.log('Server not available, using LocalStorage');
+        console.log('API не доступен, используем LocalStorage');
     }
     
     // Fallback на LocalStorage
@@ -328,62 +328,64 @@ async function loadSavedPositions() {
 }
 
 async function loadDataFromServer() {
+    const apiUrl = CONFIG.SHEETS_API_URL || '/api/data';
     try {
-        const response = await fetch('/api/data');
+        const response = await fetch(apiUrl);
         if (response.ok) {
             const data = await response.json();
             visits = data.visits || [];
             tasks = data.tasks || [];
             plans = data.plans || [];
             
-            // Сохраняем в LocalStorage как кэш
             await localforage.setItem('visits', visits);
             await localforage.setItem('tasks', tasks);
             await localforage.setItem('plans', plans);
             
-            console.log('✅ Данные загружены с сервера');
+            console.log('✅ Данные загружены с', CONFIG.SHEETS_API_URL ? 'Google Sheets' : 'сервера');
             return true;
         }
     } catch (error) {
-        console.log('⚠️ Сервер недоступен, используем LocalStorage');
+        console.log('⚠️ API недоступен, используем LocalStorage');
         return false;
     }
 }
 
 async function saveDataToServer() {
+    const apiUrl = CONFIG.SHEETS_API_URL || '/api/data';
+    const payload = JSON.stringify({
+        visits: visits,
+        tasks: tasks,
+        plans: plans,
+        store_positions: stores.map(s => ({
+            tk: s.tk_number,
+            lat: s.lat,
+            lng: s.lng
+        }))
+    });
+
     try {
-        const response = await fetch('/api/data', {
+        // Для Google Apps Script используем Content-Type: text/plain,
+        // чтобы избежать CORS preflight (OPTIONS), который Apps Script не поддерживает.
+        const contentType = CONFIG.SHEETS_API_URL ? 'text/plain' : 'application/json';
+
+        const response = await fetch(apiUrl, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                visits: visits,
-                tasks: tasks,
-                plans: plans,
-                store_positions: stores.map(s => ({
-                    tk: s.tk_number,
-                    lat: s.lat,
-                    lng: s.lng
-                }))
-            })
+            headers: { 'Content-Type': contentType },
+            body: payload
         });
         
         if (response.ok) {
-            const result = await response.json();
-            console.log('✅ Данные сохранены на сервер (в data.json)');
+            console.log('✅ Данные сохранены в', CONFIG.SHEETS_API_URL ? 'Google Sheets' : 'data.json');
             showSaveIndicator(true);
             return true;
         } else {
-            const error = await response.text();
-            console.error('Ошибка сохранения на сервер:', error);
+            console.error('Ошибка сохранения:', await response.text());
             showSaveIndicator(false);
             return false;
         }
     } catch (error) {
-        console.error('Ошибка сохранения на сервер:', error);
+        console.error('Ошибка сохранения:', error);
         showSaveIndicator(false);
-        // Fallback: сохраняем только в LocalStorage если сервер недоступен
         await localforage.setItem('visits', visits);
         await localforage.setItem('tasks', tasks);
         await localforage.setItem('plans', plans);

@@ -9,7 +9,10 @@ const CONFIG = {
         OUR: '#10B981',
         OTHER: '#3B82F6',
         NONE: '#9CA3AF'
-    }
+    },
+    // URL задеплоенного Google Apps Script (вставь после деплоя).
+    // Пока пустая строка — данные хранятся локально через node server.js.
+    SHEETS_API_URL: "https://script.google.com/macros/s/AKfycbyW1PNsjxqW_GgHWEa2li9MkcsSQvKcYqr5PdSNKuAg3i3ZNjUqr1CgHwpHuVUaLTCh/exec"
 };
 
 function checkPassword() {
