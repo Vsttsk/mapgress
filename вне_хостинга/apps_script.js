@@ -18,7 +18,8 @@ function doGet(e) {
       visits:          getSheetData(ss, 'visits'),
       tasks:           getSheetData(ss, 'tasks'),
       plans:           getSheetData(ss, 'plans'),
-      store_positions: getSheetData(ss, 'store_positions')
+      store_positions: getSheetData(ss, 'store_positions'),
+      highlighted:     getSheetData(ss, 'highlighted').map(r => Number(r.tk)).filter(Boolean)
     };
     return jsonResponse(data);
   } catch (err) {
@@ -55,6 +56,9 @@ function doPost(e) {
     if (data.store_positions !== undefined)
       setSheetData(ss, 'store_positions', data.store_positions,
         ['tk', 'lat', 'lng']);
+
+    if (data.highlighted !== undefined)
+      setSheetData(ss, 'highlighted', data.highlighted.map(tk => ({ tk })), ['tk']);
 
     return jsonResponse({ success: true });
   } catch (err) {

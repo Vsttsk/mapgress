@@ -1,0 +1,3 @@
+{"location":"app.js:loadAllFromServer:entry","message":"API URL и наличие SHEETS_API_URL","data":{"apiUrl":"https://script.google.com/macros/s/AKfycbyW1PNsjxqW_GgHWEa2li9MkcsSQvKcYqr5PdSNKuAg3i3ZNjUqr1CgHwpHuVUaLTCh/exec","hasUrl":true},"timestamp":1771435061650,"hypothesisId":"H-A"}
+{"location":"app.js:loadAllFromServer:ok","message":"Ответ от API","data":{"visitsCount":6,"tasksCount":0,"plansCount":0,"posCount":226,"hasError":false,"errorMsg":null},"timestamp":1771435064895,"hypothesisId":"H-B,H-C"}
+{"location":"app.js:initApp:beforeInitMap","message":"Состояние перед initMap","data":{"storesCount":226,"visitsCount":6,"tasksCount":0,"plansCount":0},"timestamp":1771435064908,"hypothesisId":"H-E"}

@@ -43,7 +43,10 @@
                 <button class="btn-icon" onclick="showCalendar()" title="Календарь">📅</button>
             </div>
             <div id="editor-bar" class="hidden">
-                <span>Режим редактора</span>
+                <div class="editor-mode-toggle">
+                    <button class="toggle-btn active" id="mode-move-btn" onclick="setEditorSubMode('move')" title="Двигать маркеры">✋ Двигать</button>
+                    <button class="toggle-btn" id="mode-highlight-btn" onclick="setEditorSubMode('highlight')" title="Отмечать важные ТК">🔴 Важные</button>
+                </div>
                 <button class="btn btn-primary" onclick="finishEditing()">Готово</button>
             </div>
         </div>

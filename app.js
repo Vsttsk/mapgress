@@ -6,7 +6,9 @@ let plans = [];
 let markers = {};
 let statsChart = null;
 let editorMode = false;
+let editorSubMode = 'move'; // 'move' | 'highlight'
 let activeMarker = null;
+let highlighted = new Set(); // номера ТК с красной обводкой
 
 const COLORS = { OUR: 'green', OTHER: 'blue', NONE: 'gray', EDIT: 'orange' };
 
@@ -181,7 +183,7 @@ function createMarker(store) {
     
     const marker = L.marker([store.lat, store.lng], {
         icon: L.divIcon({
-            html: `<div class="marker marker-${color}" data-tk="${store.tk_number}" title="${officesLabel}">${store.tk_number}</div>`,
+            html: `<div class="marker marker-${color}${highlighted.has(store.tk_number) ? ' marker-highlighted' : ''}" data-tk="${store.tk_number}" title="${officesLabel}">${store.tk_number}</div>`,
             className: 'custom-marker',
             iconSize: [markerSize, markerSize],
             iconAnchor: [markerSize / 2, markerSize / 2]
@@ -214,7 +216,12 @@ function createMarker(store) {
 
 function activateMarker(tkNumber) {
     if (!editorMode) return;
-    
+
+    if (editorSubMode === 'highlight') {
+        toggleHighlight(tkNumber);
+        return;
+    }
+
     // Деактивируем предыдущий активный маркер
     if (activeMarker && activeMarker !== tkNumber) {
         const prevMarker = markers[activeMarker];
@@ -243,6 +250,38 @@ function activateMarker(tkNumber) {
     }
 }
 
+function toggleHighlight(tkNumber) {
+    if (highlighted.has(tkNumber)) {
+        highlighted.delete(tkNumber);
+    } else {
+        highlighted.add(tkNumber);
+    }
+    const color = getMarkerColor(tkNumber);
+    updateMarkerVisual(tkNumber, color);
+    saveDataToServer();
+}
+
+function setEditorSubMode(mode) {
+    editorSubMode = mode;
+    document.getElementById('mode-move-btn').classList.toggle('active', mode === 'move');
+    document.getElementById('mode-highlight-btn').classList.toggle('active', mode === 'highlight');
+
+    // Деактивируем активный маркер (move-режим)
+    if (activeMarker) {
+        const color = getMarkerColor(activeMarker);
+        updateMarkerVisual(activeMarker, color);
+        if (markers[activeMarker]) markers[activeMarker].dragging.disable();
+        activeMarker = null;
+    }
+
+    // Включаем/выключаем перетаскивание у всех маркеров
+    Object.keys(markers).forEach(tk => {
+        const m = markers[tk];
+        if (mode === 'move') m.dragging.enable();
+        else m.dragging.disable();
+    });
+}
+
 function updateMarkerVisual(tkNumber, color) {
     const marker = markers[tkNumber];
     if (!marker) return;
@@ -254,7 +293,7 @@ function updateMarkerVisual(tkNumber, color) {
     const markerSize = isMobile ? 40 : 36;
     
     marker.setIcon(L.divIcon({
-        html: `<div class="marker marker-${color}" data-tk="${tkNumber}" title="${officesLabel}">${tkNumber}</div>`,
+        html: `<div class="marker marker-${color}${highlighted.has(tkNumber) ? ' marker-highlighted' : ''}" data-tk="${tkNumber}" title="${officesLabel}">${tkNumber}</div>`,
         className: 'custom-marker',
         iconSize: [markerSize, markerSize],
         iconAnchor: [markerSize / 2, markerSize / 2]
@@ -291,9 +330,10 @@ async function loadAllFromServer() {
             // Если Apps Script вернул ошибку — падаем в fallback на LocalStorage
             if (data.error) throw new Error(data.error);
 
-            visits = data.visits || [];
-            tasks  = data.tasks  || [];
-            plans  = data.plans  || [];
+            visits    = data.visits    || [];
+            tasks     = data.tasks     || [];
+            plans     = data.plans     || [];
+            highlighted = new Set(data.highlighted || []);
 
             if (data.store_positions && data.store_positions.length > 0) {
                 data.store_positions.forEach(pos => {
@@ -359,7 +399,8 @@ async function saveDataToServer() {
             tk: s.tk_number,
             lat: s.lat,
             lng: s.lng
-        }))
+        })),
+        highlighted: [...highlighted]
     });
 
     try {
@@ -708,11 +749,15 @@ function toggleEditorMode() {
 
 function finishEditing() {
     editorMode = false;
+    editorSubMode = 'move';
     activeMarker = null;
     document.getElementById('editor-btn').classList.remove('active');
     document.getElementById('editor-bar').classList.add('hidden');
     document.getElementById('stats-bar').classList.remove('editor-active');
     document.getElementById('app').classList.remove('editor-mode');
+    // Сбрасываем кнопки тумблера на дефолт
+    document.getElementById('mode-move-btn').classList.add('active');
+    document.getElementById('mode-highlight-btn').classList.remove('active');
     
     // Пересоздаём маркеры в обычном режиме
     Object.keys(markers).forEach(tk => {

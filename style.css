@@ -917,3 +917,60 @@ body {
     /* Убираем ручку-индикатор на десктопе */
     .panel-handle { display: none; }
 }
+
+/* ============================================================
+   EDITOR MODE TOGGLE (Двигать / Важные)
+   ============================================================ */
+.editor-mode-toggle {
+    display: flex;
+    background: rgba(245,158,11,0.18);
+    border-radius: 8px;
+    padding: 2px;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.toggle-btn {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #92400E;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+    min-height: 36px;
+    font-family: inherit;
+}
+
+.toggle-btn.active {
+    background: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.14);
+    color: #92400E;
+}
+
+.toggle-btn:active { transform: scale(0.94); }
+
+/* ============================================================
+   HIGHLIGHTED MARKER (красная обводка)
+   ============================================================ */
+.marker-highlighted {
+    box-shadow:
+        0 0 0 3px #EF4444,
+        0 0 0 7px rgba(239,68,68,0.28),
+        0 2px 8px rgba(0,0,0,0.22) !important;
+    animation: pulse-red 1.3s ease-in-out infinite !important;
+    z-index: 900 !important;
+}
+
+@keyframes pulse-red {
+    0%, 100% {
+        box-shadow: 0 0 0 3px #EF4444, 0 0 0 7px rgba(239,68,68,0.28), 0 2px 8px rgba(0,0,0,0.22);
+    }
+    50% {
+        box-shadow: 0 0 0 3px #EF4444, 0 0 0 12px rgba(239,68,68,0.1), 0 2px 8px rgba(0,0,0,0.22);
+    }
+}
