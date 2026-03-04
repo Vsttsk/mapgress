@@ -244,6 +244,39 @@ body {
     z-index: 100;
 }
 
+#stats-bar .btn {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.stats-search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.stats-search input {
+    width: 72px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    text-align: center;
+    background: var(--surface);
+}
+
+.stats-search input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--white);
+}
+
+.stats-search-btn {
+    white-space: nowrap;
+}
+
 #stats-summary {
     flex: 1;
     font-size: 12px;

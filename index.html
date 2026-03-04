@@ -36,6 +36,10 @@
     <!-- Основное приложение -->
     <div id="app" style="display: none;">
         <div id="stats-bar">
+            <div class="stats-search">
+                <input type="number" id="tk-search-input" inputmode="numeric" pattern="[0-9]*" placeholder="№ ТК" />
+                <button class="btn btn-secondary stats-search-btn" onclick="searchTK()">Найти</button>
+            </div>
             <span id="stats-summary">📊 За 14 дней: ...</span>
             <div class="stats-actions">
                 <button class="btn-icon" id="editor-btn" onclick="toggleEditorMode()" title="Редактор">✏️</button>

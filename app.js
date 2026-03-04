@@ -250,7 +250,8 @@ function activateMarker(tkNumber) {
     }
 }
 
-function toggleHighlight(tkNumber) {
+async function toggleHighlight(tkNumber) {
+    showLoadingOverlay('Сохраняем выделение...');
     if (highlighted.has(tkNumber)) {
         highlighted.delete(tkNumber);
     } else {
@@ -258,7 +259,8 @@ function toggleHighlight(tkNumber) {
     }
     const color = getMarkerColor(tkNumber);
     updateMarkerVisual(tkNumber, color);
-    saveDataToServer();
+    await saveDataToServer();
+    hideLoadingOverlay();
 }
 
 function setEditorSubMode(mode) {
@@ -308,6 +310,7 @@ async function saveMarkerPosition(tkNumber, marker) {
     store.lat = latlng.lat;
     store.lng = latlng.lng;
     
+    showLoadingOverlay('Сохраняем позицию маркера...');
     // Сохраняем на сервер (в файл проекта)
     await saveDataToServer();
     
@@ -317,6 +320,7 @@ async function saveMarkerPosition(tkNumber, marker) {
         lat: s.lat,
         lng: s.lng
     })));
+    hideLoadingOverlay();
 }
 
 // Единый запрос к API — загружает visits/tasks/plans и позиции маркеров
@@ -656,6 +660,35 @@ async function completeTask(tkNumber) {
     }
 }
 
+function searchTK() {
+    const input = document.getElementById('tk-search-input');
+    if (!input) return;
+    
+    const raw = input.value.trim();
+    if (!raw) {
+        alert('Введите номер ТК');
+        return;
+    }
+    
+    const tkNumber = parseInt(raw, 10);
+    if (Number.isNaN(tkNumber)) {
+        alert('Некорректный номер ТК');
+        return;
+    }
+    
+    const store = stores.find(s => s.tk_number == tkNumber);
+    if (!store) {
+        alert('ТК с таким номером не найден');
+        return;
+    }
+    
+    if (map) {
+        map.flyTo([store.lat, store.lng], 15, { duration: 0.7 });
+    }
+    
+    showTKPanel(store.tk_number);
+}
+
 function updateStats() {
     const last14Days = visits.filter(v => isWithinDays(v.date, 14));
     const ourTKs = [...new Set(last14Days.filter(v => v.our_presence).map(v => v.tk))];
@@ -816,6 +849,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (passwordInput) {
         passwordInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') checkPassword();
+        });
+    }
+    
+    const tkSearchInput = document.getElementById('tk-search-input');
+    if (tkSearchInput) {
+        tkSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchTK();
         });
     }
     
