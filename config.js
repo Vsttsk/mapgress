@@ -1,5 +1,5 @@
 const CONFIG = {
-    PASSWORD: "445566",
+    PASSWORD: "999",
     APP_NAME: "Монитор Лента",
     MAP_CENTER: [55.75, 37.61],
     MAP_ZOOM: 10,
