@@ -355,6 +355,12 @@ body {
     max-width: 160px;
 }
 
+.demand-actions-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
 .demand-reset-btn {
     flex-shrink: 0;
     padding: 8px 12px;
@@ -362,9 +368,14 @@ body {
     min-height: 36px;
 }
 
+.demand-reset-btn,
+#demand-hide-gray-btn {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+}
 #demand-hide-gray-btn.active {
     background: var(--primary-light);
     color: var(--primary-deeper);
+    border-color: rgba(0, 0, 0, 0.1);
 }
 
 .potrebnost-title {
@@ -1314,6 +1325,217 @@ body {
 @keyframes slideOut {
     from { transform: translateX(0);                 opacity: 1; }
     to   { transform: translateX(calc(100% + 20px)); opacity: 0; }
+}
+
+/* ============================================================
+   MOBILE (≤ 767px)
+   ============================================================ */
+@media (max-width: 767px) {
+    html {
+        -webkit-text-size-adjust: 100%;
+    }
+    body {
+        min-height: 100dvh;
+        overflow-x: hidden;
+    }
+
+    /* Экран входа — безопасные зоны и удобный ввод */
+    #password-screen {
+        padding: calc(20px + var(--safe-top)) calc(16px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(16px + var(--safe-left));
+    }
+    #password-screen h1 {
+        font-size: 26px;
+        text-align: center;
+    }
+    #password-input {
+        font-size: 16px; /* не меньше 16px — иначе iOS зумит при фокусе */
+        max-width: 100%;
+        padding: 14px 18px;
+    }
+    #password-screen button {
+        min-height: 48px;
+        padding: 14px 24px;
+    }
+
+    /* Выбор режима */
+    #mode-choice {
+        padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left));
+    }
+    .mode-choice-inner h2 {
+        font-size: 20px;
+        margin-bottom: 20px;
+    }
+    .mode-card {
+        padding: 20px 16px;
+        min-height: 72px;
+        justify-content: center;
+    }
+    .mode-icon-img {
+        width: 44px;
+        height: 44px;
+    }
+    .mode-title { font-size: 17px; }
+    .mode-desc { font-size: 12px; }
+
+    /* Верхние панели — перенос при нехватке места, удобные зоны нажатия */
+    #stats-bar,
+    #potrebnost-stats-bar,
+    #analytics-stats-bar {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: calc(8px + var(--safe-top)) calc(10px + var(--safe-right)) 8px calc(10px + var(--safe-left));
+        min-height: calc(48px + var(--safe-top));
+    }
+    #stats-bar {
+        min-height: calc(56px + var(--safe-top));
+    }
+    #stats-summary {
+        font-size: 11px;
+        flex: 1;
+        min-width: 0;
+    }
+    .stats-actions {
+        gap: 4px;
+    }
+    .btn-icon {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 20px;
+    }
+    .service-nav {
+        gap: 2px;
+        margin-left: auto;
+    }
+    .service-nav-btn {
+        min-height: 44px;
+        padding: 10px 10px;
+        font-size: 12px;
+    }
+
+    /* Потребность: фильтры и кнопки в одну линию с переносом */
+    #potrebnost-stats-bar {
+        min-height: auto;
+        padding-bottom: 10px;
+    }
+    #potrebnost-stats-bar .stats-search input {
+        width: 64px;
+        min-height: 40px;
+    }
+    .demand-job-select {
+        min-height: 40px;
+        max-width: 140px;
+        font-size: 12px;
+    }
+    .demand-actions-row {
+        flex-wrap: nowrap;
+    }
+    #demand-hide-gray-btn,
+    .demand-reset-btn {
+        min-height: 40px;
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    /* Аналитика */
+    .analytics-color-select {
+        min-width: 0;
+        flex: 1;
+        min-height: 40px;
+        font-size: 12px;
+    }
+
+    /* Карта — убрать лишние отступы */
+    #map,
+    #map-potrebnost,
+    #map-analytics {
+        min-height: 200px;
+    }
+
+    /* Панели снизу — полноэкранный стиль на мобильном, безопасная зона */
+    #tk-panel,
+    #demand-panel,
+    #analytics-panel {
+        left: 0;
+        right: 0;
+        border-radius: 20px 20px 0 0;
+        padding-bottom: calc(20px + var(--safe-bottom));
+        max-height: 85vh;
+        max-height: 85dvh;
+    }
+    #tk-info,
+    #demand-info,
+    #analytics-info {
+        padding-left: calc(16px + var(--safe-left));
+        padding-right: calc(16px + var(--safe-right));
+        padding-bottom: calc(24px + var(--safe-bottom));
+    }
+    .btn-close {
+        right: calc(8px + var(--safe-right));
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    /* Модалки */
+    .modal {
+        margin: calc(10px + var(--safe-top)) 12px calc(10px + var(--safe-bottom));
+        max-height: calc(100dvh - 20px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .modal-overlay {
+        padding: 0;
+        align-items: flex-end;
+    }
+    .modal label,
+    .modal input,
+    .modal textarea,
+    .modal select {
+        min-height: 44px;
+    }
+    .modal-actions .btn {
+        min-height: 48px;
+    }
+
+    /* Редактор */
+    #editor-bar {
+        top: calc(56px + var(--safe-top));
+        padding: 8px calc(10px + var(--safe-right)) 8px calc(10px + var(--safe-left));
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .editor-mode-toggle .toggle-btn {
+        min-height: 40px;
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+
+    /* Загрузчик */
+    #app-loader {
+        padding: calc(20px + var(--safe-top)) 20px calc(20px + var(--safe-bottom));
+    }
+    .loader-logo {
+        max-width: 72px;
+        max-height: 72px;
+    }
+    #loading-overlay .loading-card {
+        margin: calc(16px + var(--safe-top));
+    }
+}
+
+/* Очень узкие экраны (≤ 360px) */
+@media (max-width: 360px) {
+    .service-nav-btn {
+        padding: 10px 6px;
+        font-size: 11px;
+    }
+    .mode-card {
+        padding: 16px 12px;
+    }
+    .mode-title { font-size: 16px; }
 }
 
 /* ============================================================

@@ -114,8 +114,10 @@
             <select id="demand-job-filter" class="demand-job-select" onchange="onDemandFilterChange()" title="Фильтр по должности">
                 <option value="">Все вакансии</option>
             </select>
-            <button class="btn btn-ghost demand-reset-btn" onclick="resetDemandFilter()">Сбросить</button>
-            <button class="btn btn-ghost" id="demand-hide-gray-btn" onclick="toggleDemandHideGray()" title="Скрыть ТК без потребности">Скрыть серые</button>
+            <span class="demand-actions-row">
+                <button class="btn btn-ghost demand-reset-btn" onclick="resetDemandFilter()">Сбросить</button>
+                <button class="btn btn-ghost" id="demand-hide-gray-btn" onclick="toggleDemandHideGray()" title="Скрыть ТК без потребности">Скрыть серые</button>
+            </span>
             <nav class="service-nav" aria-label="Сервисы">
                 <button type="button" class="service-nav-btn" data-mode="obezdy" onclick="switchToObezdy()">Объезды</button>
                 <button type="button" class="service-nav-btn active" data-mode="potrebnost" onclick="switchToPotrebnost()">Потребность</button>
