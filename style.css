@@ -53,12 +53,14 @@ body {
     height: 100vh;
     height: 100dvh;
     padding: calc(24px + var(--safe-top)) 24px calc(24px + var(--safe-bottom));
-    background: linear-gradient(150deg, #0ea570 0%, #059669 45%, #047857 100%);
+    background: linear-gradient(150deg, #6B8E9B 0%, #5F8A95 45%, #7A9BA6 100%);
     color: white;
 }
 
-.auth-logo {
-    font-size: 60px;
+.auth-logo-img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
     margin-bottom: 14px;
     filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2));
     animation: fadeInDown 0.5s ease both;
@@ -136,12 +138,96 @@ body {
 }
 
 /* ============================================================
+   ВЫБОР РЕЖИМА (после ввода пароля)
+   ============================================================ */
+#mode-choice {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(150deg, #6B8E9B 0%, #5F8A95 45%, #7A9BA6 100%);
+    padding: calc(24px + var(--safe-top)) 24px calc(24px + var(--safe-bottom));
+    z-index: 9000;
+}
+
+.mode-choice-inner {
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+}
+
+.mode-choice-inner h2 {
+    color: white;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 28px;
+    letter-spacing: -0.3px;
+}
+
+.mode-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.mode-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 24px 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: inherit;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+    transition: transform 0.15s, box-shadow 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mode-card:active {
+    transform: scale(0.98);
+}
+
+@media (hover: hover) {
+    .mode-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+    }
+}
+
+.mode-icon {
+    font-size: 42px;
+    line-height: 1;
+}
+.mode-icon-img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    font-size: 0;
+}
+
+.mode-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.mode-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* ============================================================
    APP LOADER (после логина, пока грузится карта)
    ============================================================ */
 #app-loader {
     position: fixed;
     inset: 0;
-    background: linear-gradient(150deg, #0ea570 0%, #059669 45%, #047857 100%);
+    background: linear-gradient(150deg, #6B8E9B 0%, #5F8A95 45%, #7A9BA6 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -152,18 +238,20 @@ body {
 }
 
 .loader-logo {
-    font-size: 58px;
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
     animation: pulse-scale 1.6s ease-in-out infinite;
 }
 
 #app-loader p {
     font-size: 14px;
     font-weight: 500;
-    opacity: 0.8;
+    opacity: 0.9;
 }
 
 #app-loader .spinner {
-    border-color: rgba(255,255,255,0.3);
+    border-color: rgba(255,255,255,0.35);
     border-top-color: white;
 }
 
@@ -173,7 +261,7 @@ body {
 #loading-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.48);
+    background: rgba(95, 138, 149, 0.55);
     backdrop-filter: blur(3px);
     -webkit-backdrop-filter: blur(3px);
     z-index: 3000;
@@ -226,6 +314,297 @@ body {
 }
 
 #app.editor-mode #stats-bar { background: #FFFBEB; border-bottom-color: #FCD34D; }
+
+/* ============================================================
+   РЕЖИМ ПОТРЕБНОСТЬ
+   ============================================================ */
+#app-potrebnost {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+}
+
+#app-potrebnost.hidden {
+    display: none !important;
+}
+
+#potrebnost-stats-bar {
+    padding: calc(10px + var(--safe-top)) calc(12px + var(--safe-right)) 10px calc(12px + var(--safe-left));
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+    gap: 10px;
+    min-height: calc(52px + var(--safe-top));
+    position: relative;
+    z-index: 100;
+}
+
+.demand-job-select {
+    min-height: 36px;
+    padding: 8px 10px;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 13px;
+    color: var(--text);
+    max-width: 160px;
+}
+
+.demand-reset-btn {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    font-size: 13px;
+    min-height: 36px;
+}
+
+#demand-hide-gray-btn.active {
+    background: var(--primary-light);
+    color: var(--primary-deeper);
+}
+
+.potrebnost-title {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Единое меню переключения сервисов — справа на всех трёх */
+.service-nav {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+.service-nav-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    min-height: 36px;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.service-nav-btn:hover {
+    background: var(--border);
+    color: var(--text);
+}
+.service-nav-btn.active {
+    background: var(--secondary);
+    border-color: var(--secondary);
+    color: white;
+}
+.service-nav-btn.active:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: white;
+}
+
+#map-potrebnost {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    touch-action: pan-x pan-y pinch-zoom;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    z-index: 1;
+}
+
+#app-analytics {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 5;
+}
+
+#app-analytics.hidden {
+    display: none !important;
+}
+
+#analytics-stats-bar {
+    flex-shrink: 0;
+    padding: calc(10px + var(--safe-top)) calc(12px + var(--safe-right)) 10px calc(12px + var(--safe-left));
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    min-height: calc(52px + var(--safe-top));
+}
+.analytics-color-select {
+    flex-shrink: 0;
+    min-width: 180px;
+}
+
+#map-analytics {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    touch-action: pan-x pan-y pinch-zoom;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    z-index: 1;
+}
+
+#analytics-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.14);
+    max-height: 78vh;
+    max-height: 78dvh;
+    overflow-y: auto;
+    z-index: 1000;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+#analytics-panel.hidden {
+    display: none !important;
+}
+
+#analytics-info {
+    padding: 16px calc(16px + var(--safe-right)) calc(28px + var(--safe-bottom)) calc(16px + var(--safe-left));
+}
+
+#analytics-panel h3 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    padding-right: 44px;
+    letter-spacing: -0.5px;
+    color: var(--text);
+}
+
+#analytics-panel .demand-row {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: var(--surface);
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border);
+}
+#analytics-panel .demand-row:last-of-type { margin-bottom: 0; }
+#analytics-panel .demand-label {
+    font-weight: 600;
+    color: var(--text);
+}
+
+#demand-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.14);
+    max-height: 78vh;
+    max-height: 78dvh;
+    overflow-y: auto;
+    z-index: 1000;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+#demand-info {
+    padding: 4px calc(16px + var(--safe-right)) calc(28px + var(--safe-bottom)) calc(16px + var(--safe-left));
+}
+
+#demand-panel h3 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    padding-right: 44px;
+    letter-spacing: -0.5px;
+    color: var(--text);
+}
+
+#demand-panel .tk-address {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.demand-card {
+    margin-bottom: 16px;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.demand-card:last-child {
+    margin-bottom: 0;
+}
+
+.demand-card-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.demand-card-main strong {
+    font-size: 15px;
+    color: var(--text);
+}
+
+.demand-count {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--primary-light);
+    padding: 4px 10px;
+    border-radius: 100px;
+}
+
+.demand-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.demand-row {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.45;
+}
+
+.demand-label {
+    color: var(--text-muted);
+    margin-right: 6px;
+}
+
+.demand-row-muted {
+    font-size: 12px;
+    color: var(--text-muted);
+}
 
 /* ============================================================
    STATS BAR
@@ -373,6 +752,38 @@ body {
     max-width: 200px !important;
     text-align: center !important;
     line-height: 1.5 !important;
+}
+
+.marker-wrap {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.marker-wrap .marker {
+    flex-shrink: 0;
+}
+
+.marker-demand-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 50%;
+    background: var(--primary-dark);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    pointer-events: none;
 }
 
 .marker {
@@ -946,6 +1357,33 @@ body {
     }
 
     #tk-panel.hidden { display: none !important; }
+
+    /* Панель потребности — центрированная карточка на десктопе */
+    #demand-panel {
+        max-width: 480px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        bottom: 20px;
+        border-radius: 20px;
+        box-shadow: var(--shadow-lg);
+        animation: popInCentered 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #demand-panel.hidden { display: none !important; }
+
+    #analytics-panel {
+        max-width: 480px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        bottom: 20px;
+        border-radius: 20px;
+        box-shadow: var(--shadow-lg);
+        animation: popInCentered 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #analytics-panel.hidden { display: none !important; }
 
     /* Убираем ручку-индикатор на десктопе */
     .panel-handle { display: none; }

@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#059669">
+    <meta name="theme-color" content="#5F8A95">
     <meta name="mobile-web-app-capable" content="yes">
     <style>
         * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
         input, textarea { -webkit-user-select: text; user-select: text; }
     </style>
     <title>Монитор Лента</title>
+    <link rel="icon" href="Q-_3_.ico" type="image/x-icon">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
 </head>
@@ -19,16 +20,40 @@
 
     <!-- Экран входа -->
     <div id="password-screen">
-        <div class="auth-logo">🗺️</div>
+        <img src="Q.png" alt="" class="auth-logo-img">
         <h1>Монитор Лента</h1>
         <p class="auth-subtitle">Мониторинг торговых точек</p>
         <input type="password" id="password-input" placeholder="Введите пароль">
         <button onclick="checkPassword()">Войти</button>
     </div>
 
+    <!-- Выбор режима после входа -->
+    <div id="mode-choice" class="hidden">
+        <div class="mode-choice-inner">
+            <h2>Выберите режим</h2>
+            <div class="mode-buttons">
+                <button class="mode-card" onclick="chooseMode('obezdy')">
+                    <img src="Q.png" alt="" class="mode-icon mode-icon-img">
+                    <span class="mode-title">Лента Объезды</span>
+                    <span class="mode-desc">Карта объездов, визиты, задачи</span>
+                </button>
+                <button class="mode-card" onclick="chooseMode('potrebnost')">
+                    <span class="mode-icon">📋</span>
+                    <span class="mode-title">Лента Потребность</span>
+                    <span class="mode-desc">Потребность по ТК</span>
+                </button>
+                <button class="mode-card" onclick="chooseMode('analytics')">
+                    <span class="mode-icon">📊</span>
+                    <span class="mode-title">Лента Аналитика</span>
+                    <span class="mode-desc">Средний выход в смену, ФОТ в неделю</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Загрузка карты после логина -->
     <div id="app-loader" class="hidden">
-        <span class="loader-logo">🗺️</span>
+        <img src="Q.png" alt="" class="loader-logo">
         <div class="spinner"></div>
         <p>Загрузка карты...</p>
     </div>
@@ -46,6 +71,11 @@
                 <button class="btn-icon" onclick="toggleDashboard()" title="Дашборд">📈</button>
                 <button class="btn-icon" onclick="showCalendar()" title="Календарь">📅</button>
             </div>
+            <nav class="service-nav" aria-label="Сервисы">
+                <button type="button" class="service-nav-btn active" data-mode="obezdy" onclick="switchToObezdy()">Объезды</button>
+                <button type="button" class="service-nav-btn" data-mode="potrebnost" onclick="switchToPotrebnost()">Потребность</button>
+                <button type="button" class="service-nav-btn" data-mode="analytics" onclick="switchToAnalytics()">Аналитика</button>
+            </nav>
             <div id="editor-bar" class="hidden">
                 <div class="editor-mode-toggle">
                     <button class="toggle-btn active" id="mode-move-btn" onclick="setEditorSubMode('move')" title="Двигать маркеры">✋ Двигать</button>
@@ -71,6 +101,53 @@
                 <h3>Дашборд</h3>
                 <canvas id="stats-chart"></canvas>
             </div>
+        </div>
+    </div>
+
+    <!-- Режим Потребность -->
+    <div id="app-potrebnost" class="hidden" style="display: none;">
+        <div id="potrebnost-stats-bar" class="stats-bar">
+            <div class="stats-search">
+                <input type="number" id="tk-search-potrebnost" inputmode="numeric" pattern="[0-9]*" placeholder="№ ТК" />
+                <button class="btn btn-secondary stats-search-btn" onclick="searchTKPotrebnost()">Найти</button>
+            </div>
+            <select id="demand-job-filter" class="demand-job-select" onchange="onDemandFilterChange()" title="Фильтр по должности">
+                <option value="">Все вакансии</option>
+            </select>
+            <button class="btn btn-ghost demand-reset-btn" onclick="resetDemandFilter()">Сбросить</button>
+            <button class="btn btn-ghost" id="demand-hide-gray-btn" onclick="toggleDemandHideGray()" title="Скрыть ТК без потребности">Скрыть серые</button>
+            <nav class="service-nav" aria-label="Сервисы">
+                <button type="button" class="service-nav-btn" data-mode="obezdy" onclick="switchToObezdy()">Объезды</button>
+                <button type="button" class="service-nav-btn active" data-mode="potrebnost" onclick="switchToPotrebnost()">Потребность</button>
+                <button type="button" class="service-nav-btn" data-mode="analytics" onclick="switchToAnalytics()">Аналитика</button>
+            </nav>
+        </div>
+        <div id="map-potrebnost"></div>
+        <div id="demand-panel" class="hidden">
+            <div class="panel-handle"></div>
+            <button class="btn-close" onclick="hideDemandPanel()" title="Закрыть">×</button>
+            <div id="demand-info"></div>
+        </div>
+    </div>
+
+    <!-- Режим Аналитика -->
+    <div id="app-analytics" class="hidden" style="display: none;">
+        <div id="analytics-stats-bar" class="stats-bar">
+            <select id="analytics-color-by" class="demand-job-select analytics-color-select" onchange="onAnalyticsColorByChange()" title="Цвет по метрике">
+                <option value="avgShift">Средний выход в смену</option>
+                <option value="avgFotWeek">Средний ФОТ в неделю</option>
+            </select>
+            <nav class="service-nav" aria-label="Сервисы">
+                <button type="button" class="service-nav-btn" data-mode="obezdy" onclick="switchToObezdy()">Объезды</button>
+                <button type="button" class="service-nav-btn" data-mode="potrebnost" onclick="switchToPotrebnost()">Потребность</button>
+                <button type="button" class="service-nav-btn active" data-mode="analytics" onclick="switchToAnalytics()">Аналитика</button>
+            </nav>
+        </div>
+        <div id="map-analytics"></div>
+        <div id="analytics-panel" class="hidden">
+            <div class="panel-handle"></div>
+            <button class="btn-close" onclick="hideAnalyticsPanel()" title="Закрыть">×</button>
+            <div id="analytics-info"></div>
         </div>
     </div>
 

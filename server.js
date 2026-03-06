@@ -15,7 +15,8 @@ async function initDataFile() {
             visits: [],
             tasks: [],
             plans: [],
-            store_positions: []
+            store_positions: [],
+            highlighted: []
         }, null, 2));
     }
 }
@@ -26,7 +27,7 @@ async function readData() {
         return JSON.parse(data);
     } catch (error) {
         console.error('Error reading data:', error);
-        return { visits: [], tasks: [], plans: [], store_positions: [] };
+        return { visits: [], tasks: [], plans: [], store_positions: [], highlighted: [] };
     }
 }
 
@@ -77,10 +78,11 @@ const server = http.createServer(async (req, res) => {
                 
                 // Объединяем данные
                 const updatedData = {
-                    visits: newData.visits || currentData.visits,
-                    tasks: newData.tasks || currentData.tasks,
-                    plans: newData.plans || currentData.plans,
-                    store_positions: newData.store_positions || currentData.store_positions
+                    visits: newData.visits ?? currentData.visits,
+                    tasks: newData.tasks ?? currentData.tasks,
+                    plans: newData.plans ?? currentData.plans,
+                    store_positions: newData.store_positions ?? currentData.store_positions,
+                    highlighted: newData.highlighted ?? currentData.highlighted
                 };
                 
                 const success = await writeData(updatedData);

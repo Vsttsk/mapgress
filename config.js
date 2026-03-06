@@ -3,6 +3,8 @@ const CONFIG = {
     APP_NAME: "Монитор Лента",
     MAP_CENTER: [55.75, 37.61],
     MAP_ZOOM: 10,
+    // Имя листа потребности в таблице (для справки; API использует свой констант в Apps Script)
+    SHEET_DEMAND_NAME: "Потребность",
     OUR_OFFICE: "Максутов",
     USER_NAME: "Менеджер", // Можно изменить на имя конкретного менеджера
     COLORS: {
@@ -18,7 +20,8 @@ const CONFIG = {
 function checkPassword() {
     const input = document.getElementById('password-input').value;
     if (input === CONFIG.PASSWORD) {
-        initApp();
+        document.getElementById('password-screen').style.display = 'none';
+        document.getElementById('mode-choice').classList.remove('hidden');
     } else {
         alert('Неверный пароль');
     }

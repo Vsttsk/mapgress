@@ -3,17 +3,59 @@
 // Вставить в Google Apps Script (script.google.com)
 // ============================================================
 
-// Вставь сюда ID своей Google-таблицы.
-// Его видно в URL таблицы:
-// https://docs.google.com/spreadsheets/d/СЮДА_ID/edit
-const SPREADSHEET_ID = 'СЮДА_ВСТАВЬ_ID_ТАБЛИЦЫ';
+// ID таблицы: https://docs.google.com/spreadsheets/d/1BNRMQp1YS6AGLEGT_vw0BcVRSpbMP3q6oXxVZ2dlvxc/edit
+const SPREADSHEET_ID = '1BNRMQp1YS6AGLEGT_vw0BcVRSpbMP3q6oXxVZ2dlvxc';
+
+// Режим «Потребность»: имя листа и колонка ТК
+const SHEET_DEMAND = 'Потребность';
+const TK_COLUMN_NAMES = ['tk', 'тк'];
+
+// Режим «Аналитика»: имя листа
+const SHEET_ANALYTICS = 'Аналитика';
 
 // ------------------------------------------------------------
-// GET — вернуть все данные в формате JSON
+// GET — вернуть все данные в формате JSON (или потребность при ?mode=demand, аналитика при ?mode=analytics)
 // ------------------------------------------------------------
 function doGet(e) {
   try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+    if (e && e.parameter && e.parameter.mode === 'analytics') {
+      const positions = getSheetData(ss, 'store_positions');
+      const analyticsByTk = getAnalyticsByTk(ss);
+      const stores = positions.map(function (row) {
+        const tk = normalizeTk(row.tk);
+        if (tk == null) return null;
+        const a = analyticsByTk[String(tk)];
+        return {
+          tk: tk,
+          lat: Number(row.lat) || null,
+          lng: Number(row.lng) || null,
+          avgShift: a ? a.avgShift : null,
+          avgFotWeek: a ? a.avgFotWeek : null
+        };
+      }).filter(function (s) { return s != null; });
+      return jsonResponse({ stores: stores });
+    }
+
+    if (e && e.parameter && e.parameter.mode === 'demand') {
+      const positions = getSheetData(ss, 'store_positions');
+      const demandByTk = getDemandByTk(ss);
+      const stores = positions.map(function (row) {
+        const tk = normalizeTk(row.tk);
+        if (tk == null) return null;
+        const demand = demandByTk[String(tk)] || [];
+        return {
+          tk: tk,
+          lat: Number(row.lat) || null,
+          lng: Number(row.lng) || null,
+          has_demand: demand.length > 0,
+          demand: demand
+        };
+      }).filter(function (s) { return s != null; });
+      return jsonResponse({ stores: stores });
+    }
+
     const data = {
       visits:          getSheetData(ss, 'visits'),
       tasks:           getSheetData(ss, 'tasks'),
@@ -133,4 +175,92 @@ function setSheetData(ss, sheetName, rows, headers) {
   ];
 
   sheet.getRange(1, 1, values.length, headers.length).setValues(values);
+}
+
+// --------------- Режим «Потребность» ---------------
+function normalizeTk(val) {
+  if (val === undefined || val === null || val === '') return null;
+  const n = Number(val);
+  return isNaN(n) ? String(val).trim() : n;
+}
+
+function findTkColumnIndex(headers) {
+  for (var i = 0; i < headers.length; i++) {
+    const lower = String(headers[i]).toLowerCase();
+    if (TK_COLUMN_NAMES.indexOf(lower) !== -1) return i;
+  }
+  return 0;
+}
+
+function getDemandByTk(ss) {
+  const sheet = ss.getSheetByName(SHEET_DEMAND);
+  if (!sheet) return {};
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return {};
+
+  const headers = values[0].map(function (h) { return h != null ? String(h).trim() : ''; });
+  const tkColIndex = findTkColumnIndex(headers);
+  const out = {};
+  for (var i = 1; i < values.length; i++) {
+    const row = values[i];
+    const tk = normalizeTk(row[tkColIndex]);
+    if (tk === null) continue;
+    const key = String(tk);
+    const obj = {};
+    headers.forEach(function (h, j) {
+      let val = row[j];
+      if (val === 'true') val = true;
+      if (val === 'false') val = false;
+      obj[h] = val;
+    });
+    if (!out[key]) out[key] = [];
+    out[key].push(obj);
+  }
+  return out;
+}
+
+// --------------- Режим «Аналитика» ---------------
+function parseNum(val) {
+  if (val === undefined || val === null || val === '') return null;
+  if (typeof val === 'number' && !isNaN(val)) return val;
+  var s = String(val).replace(/\s/g, '');
+  var n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+function getAnalyticsByTk(ss) {
+  const sheet = ss.getSheetByName(SHEET_ANALYTICS);
+  if (!sheet) return {};
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return {};
+
+  const headers = values[0].map(function (h) { return h != null ? String(h).trim() : ''; });
+  var tkIdx = -1;
+  var avgShiftIdx = -1;
+  var avgFotWeekIdx = -1;
+  for (var i = 0; i < headers.length; i++) {
+    var h = headers[i].toLowerCase();
+    if (h === 'тк' || h === 'tk') tkIdx = i;
+    if (h.indexOf('среднее количество') !== -1 && h.indexOf('смену') !== -1) avgShiftIdx = i;
+    if (h.indexOf('фот') !== -1 && h.indexOf('неделю') !== -1) avgFotWeekIdx = i;
+  }
+  if (tkIdx < 0) tkIdx = 0;
+  if (avgShiftIdx < 0 && headers.length > 6) avgShiftIdx = 6;
+  if (avgFotWeekIdx < 0 && headers.length > 9) avgFotWeekIdx = 9;
+
+  const out = {};
+  for (var r = 1; r < values.length; r++) {
+    const row = values[r];
+    const tk = normalizeTk(row[tkIdx]);
+    if (tk === null) continue;
+    const key = String(tk);
+    const avgShift = avgShiftIdx >= 0 ? parseNum(row[avgShiftIdx]) : null;
+    const avgFotWeek = avgFotWeekIdx >= 0 ? parseNum(row[avgFotWeekIdx]) : null;
+    if (avgShift !== null || avgFotWeek !== null) {
+      out[key] = { avgShift: avgShift, avgFotWeek: avgFotWeek };
+    }
+  }
+  return out;
 }

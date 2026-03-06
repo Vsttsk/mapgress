@@ -10,6 +10,21 @@ let editorSubMode = 'move'; // 'move' | 'highlight'
 let activeMarker = null;
 let highlighted = new Set(); // номера ТК с красной обводкой
 
+// Режим «Потребность»
+let demandStores = [];
+let mapPotrebnost = null;
+let demandMarkers = {};
+let potrebnostInitialized = false;
+let demandFilterJob = ''; // фильтр по должности: пусто = все, иначе значение «Должность»
+let demandHideGray = false; // скрывать серые маркеры (ТК без потребности)
+
+// Режим «Аналитика»
+let analyticsStores = [];
+let mapAnalytics = null;
+let analyticsMarkers = {};
+let analyticsInitialized = false;
+let analyticsColorBy = 'avgShift'; // 'avgShift' | 'avgFotWeek'
+
 const COLORS = { OUR: 'green', OTHER: 'blue', NONE: 'gray', EDIT: 'orange' };
 
 function parseCSVLine(line) {
@@ -177,10 +192,9 @@ function initMap() {
 function createMarker(store) {
     const color = getMarkerColor(store.tk_number);
     const officesLabel = getOfficesLabel(store);
-    
     const isMobile = window.innerWidth < 768;
     const markerSize = isMobile ? 40 : 36;
-    
+
     const marker = L.marker([store.lat, store.lng], {
         icon: L.divIcon({
             html: `<div class="marker marker-${color}${highlighted.has(store.tk_number) ? ' marker-highlighted' : ''}" data-tk="${store.tk_number}" title="${officesLabel}">${store.tk_number}</div>`,
@@ -372,6 +386,8 @@ async function loadAllFromServer() {
     visits = await localforage.getItem('visits') || [];
     tasks  = await localforage.getItem('tasks')  || [];
     plans  = await localforage.getItem('plans')  || [];
+    const savedHighlighted = await localforage.getItem('highlighted');
+    if (savedHighlighted && Array.isArray(savedHighlighted)) highlighted = new Set(savedHighlighted);
     return false;
 }
 
@@ -420,6 +436,7 @@ async function saveDataToServer() {
         
         if (response.ok) {
             console.log('✅ Данные сохранены в', CONFIG.SHEETS_API_URL ? 'Google Sheets' : 'data.json');
+            await localforage.setItem('highlighted', [...highlighted]);
             showSaveIndicator(true);
             return true;
         } else {
@@ -433,6 +450,7 @@ async function saveDataToServer() {
         await localforage.setItem('visits', visits);
         await localforage.setItem('tasks', tasks);
         await localforage.setItem('plans', plans);
+        await localforage.setItem('highlighted', [...highlighted]);
         return false;
     }
 }
@@ -802,6 +820,393 @@ function finishEditing() {
     });
 }
 
+function chooseMode(mode) {
+    const modeChoice = document.getElementById('mode-choice');
+    const appLoader = document.getElementById('app-loader');
+    if (modeChoice) modeChoice.classList.add('hidden');
+    if (appLoader) appLoader.classList.remove('hidden');
+
+    if (mode === 'obezdy') {
+        initApp();
+        return;
+    }
+    if (mode === 'potrebnost') {
+        initPotrebnost();
+        return;
+    }
+    if (mode === 'analytics') {
+        initAnalytics();
+        return;
+    }
+}
+
+async function loadDemandData() {
+    const base = CONFIG.SHEETS_API_URL || '';
+    if (!base) throw new Error('SHEETS_API_URL не настроен');
+    const apiUrl = base + (base.indexOf('?') >= 0 ? '&' : '?') + 'mode=demand';
+    const response = await fetch(apiUrl);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error('Ошибка загрузки потребности: ' + response.status);
+    if (data.error) throw new Error(data.error);
+    return data.stores || [];
+}
+
+function getDemandForFilter(store) {
+    const list = store.demand || [];
+    if (!demandFilterJob) return list;
+    return list.filter(row => (row['Должность'] || '').toString().trim() === demandFilterJob);
+}
+
+function renderDemandMarkers() {
+    if (!mapPotrebnost || !demandStores.length) return;
+    Object.values(demandMarkers).forEach(m => { if (mapPotrebnost && m) mapPotrebnost.removeLayer(m); });
+    demandMarkers = {};
+
+    demandStores.forEach(store => {
+        const filtered = getDemandForFilter(store);
+        if (demandFilterJob && filtered.length === 0) return;
+
+        const count = filtered.length;
+        const hasDemand = count > 0;
+        if (demandHideGray && !hasDemand) return;
+
+        const lat = parseFloat(store.lat);
+        const lng = parseFloat(store.lng);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        const color = hasDemand ? 'green' : 'gray';
+        const isMobile = window.innerWidth < 768;
+        const markerSize = isMobile ? 40 : 36;
+        const countHtml = hasDemand && count > 0
+            ? `<span class="marker-demand-count">${count}</span>`
+            : '';
+        const html = `<div class="marker-wrap"><div class="marker marker-${color}" data-tk="${store.tk}">${store.tk}</div>${countHtml}</div>`;
+
+        const m = L.marker([lat, lng], {
+            icon: L.divIcon({
+                html: html,
+                className: 'custom-marker',
+                iconSize: [markerSize, markerSize],
+                iconAnchor: [markerSize / 2, markerSize / 2]
+            })
+        }).addTo(mapPotrebnost);
+        m.bindTooltip(`ТК ${store.tk}${hasDemand ? ' · потребность: ' + count : ''}`, {
+            permanent: false,
+            direction: 'top',
+            className: 'marker-tooltip',
+            offset: [0, -20]
+        });
+        m.on('click', () => showDemandPanel(store.tk, store));
+        demandMarkers[store.tk] = m;
+    });
+}
+
+function fillDemandJobFilter() {
+    const sel = document.getElementById('demand-job-filter');
+    if (!sel) return;
+    const jobs = new Set();
+    demandStores.forEach(store => {
+        (store.demand || []).forEach(row => {
+            const j = row['Должность'];
+            if (j != null && String(j).trim() !== '') jobs.add(String(j).trim());
+        });
+    });
+    const jobList = [...jobs].sort();
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Все вакансии</option>' + jobList.map(j => `<option value="${escapeHtml(j)}">${escapeHtml(j)}</option>`).join('');
+    if (jobList.includes(current)) sel.value = current;
+}
+
+function onDemandFilterChange() {
+    const sel = document.getElementById('demand-job-filter');
+    demandFilterJob = sel ? sel.value : '';
+    renderDemandMarkers();
+}
+
+function resetDemandFilter() {
+    demandFilterJob = '';
+    const sel = document.getElementById('demand-job-filter');
+    if (sel) sel.value = '';
+    renderDemandMarkers();
+}
+
+function toggleDemandHideGray() {
+    demandHideGray = !demandHideGray;
+    const btn = document.getElementById('demand-hide-gray-btn');
+    if (btn) btn.classList.toggle('active', demandHideGray);
+    renderDemandMarkers();
+}
+
+function hideDemandPanel() {
+    document.getElementById('demand-panel').classList.add('hidden');
+}
+
+function showDemandPanel(tk, store) {
+    const storeData = demandStores.find(s => String(s.tk) === String(tk)) || store;
+    if (!storeData) return;
+    const demand = getDemandForFilter(storeData);
+    const first = demand[0] || {};
+    const addr = first['Адрес'] || first['адрес'] || '';
+    const mainFields = ['Должность', 'Приоритет', 'Сколько нужно людей', 'Уровень ЧТС', 'описание графика', 'Комментарий', 'РОП'];
+    const otherKeys = Object.keys(first).filter(k => !['ТК', 'тк', 'tk', 'Адрес', 'адрес'].includes(k) && !mainFields.includes(k));
+    let html = `<h3>ТК ${storeData.tk}</h3>`;
+    if (addr) html += `<p class="tk-address">${escapeHtml(addr)}</p>`;
+    if (demand.length === 0) {
+        html += '<p class="no-data">Нет данных о потребности</p>';
+    } else {
+        demand.forEach((row, idx) => {
+            html += '<div class="demand-card">';
+            html += '<div class="demand-card-main">';
+            if (row['Должность']) html += `<strong>${escapeHtml(String(row['Должность']))}</strong>`;
+            if (row['Сколько нужно людей'] != null && row['Сколько нужно людей'] !== '') html += `<span class="demand-count">${escapeHtml(String(row['Сколько нужно людей']))} чел.</span>`;
+            html += '</div>';
+            html += '<div class="demand-card-details">';
+            mainFields.forEach(f => {
+                if (row[f] != null && row[f] !== '') html += `<div class="demand-row"><span class="demand-label">${escapeHtml(f)}:</span> <span>${escapeHtml(String(row[f]))}</span></div>`;
+            });
+            otherKeys.forEach(k => {
+                if (row[k] != null && row[k] !== '') html += `<div class="demand-row demand-row-muted"><span class="demand-label">${escapeHtml(k)}:</span> <span>${escapeHtml(String(row[k]))}</span></div>`;
+            });
+            html += '</div></div>';
+        });
+    }
+    document.getElementById('demand-info').innerHTML = html;
+    document.getElementById('demand-panel').classList.remove('hidden');
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function searchTKPotrebnost() {
+    const input = document.getElementById('tk-search-potrebnost');
+    if (!input) return;
+    const raw = input.value.trim();
+    if (!raw) {
+        alert('Введите номер ТК');
+        return;
+    }
+    const tk = isNaN(Number(raw)) ? raw : Number(raw);
+    const store = demandStores.find(s => s.tk == tk);
+    if (!store) {
+        alert('ТК с таким номером не найден');
+        return;
+    }
+    const lat = parseFloat(store.lat);
+    const lng = parseFloat(store.lng);
+    if (!isNaN(lat) && !isNaN(lng) && mapPotrebnost) {
+        mapPotrebnost.flyTo([lat, lng], 15, { duration: 0.7 });
+    }
+    showDemandPanel(store.tk, store);
+}
+
+// --------------- Аналитика ---------------
+function loadAnalyticsData() {
+    return fetch(CONFIG.SHEETS_API_URL + '?mode=analytics')
+        .then(r => r.json())
+        .then(data => {
+            analyticsStores = (data && data.stores) ? data.stores : [];
+            return analyticsStores;
+        })
+        .catch(() => { analyticsStores = []; return []; });
+}
+
+function initAnalytics() {
+    const appLoader = document.getElementById('app-loader');
+    if (appLoader) appLoader.classList.remove('hidden');
+    loadAnalyticsData().then(() => {
+        document.getElementById('app-analytics').classList.remove('hidden');
+        document.getElementById('app-analytics').style.display = 'flex';
+        setServiceNavActive('analytics');
+        const mapEl = document.getElementById('map-analytics');
+        if (!mapAnalytics && mapEl) {
+            mapAnalytics = L.map('map-analytics').setView(CONFIG.MAP_CENTER, CONFIG.MAP_ZOOM);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapAnalytics);
+        }
+        renderAnalyticsMarkers();
+        analyticsInitialized = true;
+        setTimeout(() => { if (mapAnalytics) mapAnalytics.invalidateSize(); }, 100);
+        if (appLoader) appLoader.classList.add('hidden');
+    }).catch(() => {
+        if (appLoader) appLoader.classList.add('hidden');
+    });
+}
+
+function interpolateRedGreen(t) {
+    if (t <= 0) return '#ef4444';
+    if (t >= 1) return '#22c55e';
+    const r = Math.round(239 - (239 - 34) * t);
+    const g = Math.round(68 + (187 - 68) * t);
+    const b = Math.round(68 + (34 - 68) * t);
+    return '#' + [r, g, b].map(x => ('0' + Math.max(0, Math.min(255, x)).toString(16)).slice(-2)).join('');
+}
+
+function renderAnalyticsMarkers() {
+    if (!mapAnalytics) return;
+    Object.keys(analyticsMarkers).forEach(tk => {
+        if (analyticsMarkers[tk]) mapAnalytics.removeLayer(analyticsMarkers[tk]);
+    });
+    analyticsMarkers = {};
+    const key = analyticsColorBy;
+    const values = analyticsStores.map(s => s[key] != null ? Number(s[key]) : null).filter(v => v != null);
+    const minV = values.length ? Math.min(...values) : 0;
+    const maxV = values.length ? Math.max(...values) : 1;
+    const range = maxV - minV || 1;
+    analyticsStores.forEach(store => {
+        const lat = parseFloat(store.lat);
+        const lng = parseFloat(store.lng);
+        if (isNaN(lat) || isNaN(lng)) return;
+        const val = store[key] != null ? Number(store[key]) : null;
+        const t = (val != null && values.length) ? (val - minV) / range : 0.5;
+        const color = val != null ? interpolateRedGreen(t) : '#9CA3AF';
+        const marker = L.circleMarker([lat, lng], { radius: 10, fillColor: color, color: '#333', weight: 1, fillOpacity: 0.9 })
+            .addTo(mapAnalytics)
+            .on('click', () => showAnalyticsPanel(store));
+        analyticsMarkers[String(store.tk)] = marker;
+    });
+}
+
+function onAnalyticsColorByChange() {
+    const sel = document.getElementById('analytics-color-by');
+    if (sel) analyticsColorBy = sel.value || 'avgShift';
+    renderAnalyticsMarkers();
+}
+
+function hideAnalyticsPanel() {
+    document.getElementById('analytics-panel').classList.add('hidden');
+}
+
+function showAnalyticsPanel(store) {
+    const avgShift = store.avgShift != null ? Number(store.avgShift) : null;
+    const avgFot = store.avgFotWeek != null ? Number(store.avgFotWeek) : null;
+    let html = `<h3>ТК ${store.tk}</h3>`;
+    html += '<div class="demand-row"><span class="demand-label">Средний выход в смену:</span> <span>' + (avgShift != null ? avgShift : '—') + '</span></div>';
+    html += '<div class="demand-row"><span class="demand-label">Средний ФОТ в неделю:</span> <span>' + (avgFot != null ? avgFot : '—') + '</span></div>';
+    document.getElementById('analytics-info').innerHTML = html;
+    document.getElementById('analytics-panel').classList.remove('hidden');
+}
+
+function setServiceNavActive(mode) {
+    document.querySelectorAll('.service-nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
+    });
+}
+
+function ensureObezdyInited() {
+    if (map) return Promise.resolve();
+    return loadData().then(() => {
+        if (stores.length === 0) return;
+        initMap();
+        updateStats();
+    });
+}
+
+function switchToObezdy() {
+    const appLoader = document.getElementById('app-loader');
+    if (appLoader) appLoader.classList.remove('hidden');
+    document.getElementById('app-potrebnost').classList.add('hidden');
+    document.getElementById('app-potrebnost').style.display = 'none';
+    document.getElementById('app-analytics').classList.add('hidden');
+    document.getElementById('app-analytics').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    setServiceNavActive('obezdy');
+    if (!map) {
+        ensureObezdyInited().then(() => {
+            if (map) map.invalidateSize();
+            if (appLoader) appLoader.classList.add('hidden');
+        }).catch(() => {
+            if (appLoader) appLoader.classList.add('hidden');
+        });
+        return;
+    }
+    setTimeout(() => {
+        if (map) map.invalidateSize();
+        if (appLoader) appLoader.classList.add('hidden');
+    }, 200);
+}
+
+function switchToPotrebnost() {
+    setServiceNavActive('potrebnost');
+    const appLoader = document.getElementById('app-loader');
+    if (appLoader) appLoader.classList.remove('hidden');
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('app-analytics').classList.add('hidden');
+    document.getElementById('app-analytics').style.display = 'none';
+    document.getElementById('app-potrebnost').classList.remove('hidden');
+    document.getElementById('app-potrebnost').style.display = 'flex';
+    if (!potrebnostInitialized) {
+        initPotrebnost();
+        return;
+    }
+    if (mapPotrebnost) mapPotrebnost.invalidateSize();
+    setTimeout(() => { if (appLoader) appLoader.classList.add('hidden'); }, 180);
+}
+
+function switchToAnalytics() {
+    setServiceNavActive('analytics');
+    const appLoader = document.getElementById('app-loader');
+    if (appLoader) appLoader.classList.remove('hidden');
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('app-potrebnost').classList.add('hidden');
+    document.getElementById('app-potrebnost').style.display = 'none';
+    document.getElementById('app-analytics').classList.remove('hidden');
+    document.getElementById('app-analytics').style.display = 'flex';
+    if (!analyticsInitialized) {
+        initAnalytics();
+        return;
+    }
+    if (mapAnalytics) mapAnalytics.invalidateSize();
+    setTimeout(() => { if (appLoader) appLoader.classList.add('hidden'); }, 180);
+}
+
+async function initPotrebnost() {
+    const appLoader = document.getElementById('app-loader');
+    const appPotrebnost = document.getElementById('app-potrebnost');
+    const mapEl = document.getElementById('map-potrebnost');
+    if (!mapEl || !appPotrebnost) return;
+    try {
+        if (appLoader) appLoader.classList.remove('hidden');
+        try {
+            demandStores = await loadDemandData();
+        } catch (demandErr) {
+            demandStores = [];
+            console.warn('Потребность: данные с сервера недоступны, показываем пустую карту', demandErr);
+        }
+        if (appLoader) appLoader.classList.add('hidden');
+        appPotrebnost.classList.remove('hidden');
+        appPotrebnost.style.display = 'flex';
+        setServiceNavActive('potrebnost');
+
+        if (!mapPotrebnost) {
+            const center = CONFIG.MAP_CENTER || [55.75, 37.61];
+            const zoom = CONFIG.MAP_ZOOM != null ? CONFIG.MAP_ZOOM : 10;
+            mapPotrebnost = L.map('map-potrebnost', {
+                center: center,
+                zoom: zoom,
+                zoomControl: true,
+                touchZoom: true,
+                doubleClickZoom: true,
+                scrollWheelZoom: true
+            });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap',
+                maxZoom: 19,
+                minZoom: 5
+            }).addTo(mapPotrebnost);
+        }
+        fillDemandJobFilter();
+        renderDemandMarkers();
+        potrebnostInitialized = true;
+        setTimeout(() => { if (mapPotrebnost) mapPotrebnost.invalidateSize(); }, 100);
+    } catch (err) {
+        console.error('Ошибка инициализации Потребности:', err);
+        if (appLoader) appLoader.classList.add('hidden');
+        alert('Ошибка загрузки данных потребности. Проверьте консоль и URL API.');
+    }
+}
+
 async function initApp() {
     try {
         const passwordScreen = document.getElementById('password-screen');
@@ -826,6 +1231,7 @@ async function initApp() {
 
         if (appLoader) appLoader.classList.add('hidden');
         app.style.display = 'flex';
+        setServiceNavActive('obezdy');
 
         initMap();
         updateStats();
@@ -858,15 +1264,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') searchTK();
         });
     }
+    const tkSearchPotrebnost = document.getElementById('tk-search-potrebnost');
+    if (tkSearchPotrebnost) {
+        tkSearchPotrebnost.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchTKPotrebnost();
+        });
+    }
     
     // Обработка изменения размера экрана
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
-            if (map) {
-                map.invalidateSize();
-            }
+            if (map) map.invalidateSize();
+            if (mapPotrebnost) mapPotrebnost.invalidateSize();
         }, 250);
     });
     
