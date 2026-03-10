@@ -1080,9 +1080,11 @@ function hideAnalyticsPanel() {
 
 function showAnalyticsPanel(store) {
     const avgShift = store.avgShift != null ? Number(store.avgShift) : null;
+    const avgPeople = store.avgPeopleDay != null ? Number(store.avgPeopleDay) : null;
     const avgFot = store.avgFotWeek != null ? Number(store.avgFotWeek) : null;
     let html = `<h3>ТК ${store.tk}</h3>`;
-    html += '<div class="demand-row"><span class="demand-label">Средний выход в смену:</span> <span>' + (avgShift != null ? avgShift : '—') + '</span></div>';
+    html += '<div class="demand-row"><span class="demand-label">Средний выход сотрудников в день:</span> <span>' + (avgPeople != null ? avgPeople : '—') + '</span></div>';
+    html += '<div class="demand-row"><span class="demand-label">Средний выход в смену, ч.:</span> <span>' + (avgShift != null ? avgShift : '—') + '</span></div>';
     html += '<div class="demand-row"><span class="demand-label">Средний ФОТ в неделю:</span> <span>' + (avgFot != null ? avgFot : '—') + '</span></div>';
     document.getElementById('analytics-info').innerHTML = html;
     document.getElementById('analytics-panel').classList.remove('hidden');

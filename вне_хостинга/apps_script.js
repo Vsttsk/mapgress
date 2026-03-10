@@ -238,16 +238,28 @@ function getAnalyticsByTk(ss) {
 
   const headers = values[0].map(function (h) { return h != null ? String(h).trim() : ''; });
   var tkIdx = -1;
+  var avgPeopleIdx = -1;    // средний выход сотрудников в день
   var avgShiftIdx = -1;
   var avgFotWeekIdx = -1;
   for (var i = 0; i < headers.length; i++) {
     var h = headers[i].toLowerCase();
     if (h === 'тк' || h === 'tk') tkIdx = i;
-    if (h.indexOf('среднее количество') !== -1 && h.indexOf('смену') !== -1) avgShiftIdx = i;
-    if (h.indexOf('фот') !== -1 && h.indexOf('неделю') !== -1) avgFotWeekIdx = i;
+    // столбец со средним количеством сотрудников в день
+    if ((h.indexOf('средний') !== -1 || h.indexOf('среднее') !== -1) &&
+        (h.indexOf('сотруд') !== -1 || h.indexOf('чел') !== -1)) {
+      avgPeopleIdx = i;
+    }
+    // столбец со средним выходом часов в день / смену
+    if ((h.indexOf('средний') !== -1 || h.indexOf('среднее') !== -1) &&
+        (h.indexOf('час') !== -1 || h.indexOf('ч.') !== -1 || h.indexOf('в смену') !== -1)) {
+      avgShiftIdx = i;
+    }
+    if (h.indexOf('фот') !== -1 && h.indexOf('недел') !== -1) avgFotWeekIdx = i;
   }
   if (tkIdx < 0) tkIdx = 0;
+  // если явно не нашли, пробуем эвристики по позициям (как раньше)
   if (avgShiftIdx < 0 && headers.length > 6) avgShiftIdx = 6;
+  if (avgPeopleIdx < 0 && avgShiftIdx > 0) avgPeopleIdx = avgShiftIdx - 1;
   if (avgFotWeekIdx < 0 && headers.length > 9) avgFotWeekIdx = 9;
 
   const out = {};
@@ -256,10 +268,15 @@ function getAnalyticsByTk(ss) {
     const tk = normalizeTk(row[tkIdx]);
     if (tk === null) continue;
     const key = String(tk);
+    const avgPeopleDay = avgPeopleIdx >= 0 ? parseNum(row[avgPeopleIdx]) : null;
     const avgShift = avgShiftIdx >= 0 ? parseNum(row[avgShiftIdx]) : null;
     const avgFotWeek = avgFotWeekIdx >= 0 ? parseNum(row[avgFotWeekIdx]) : null;
-    if (avgShift !== null || avgFotWeek !== null) {
-      out[key] = { avgShift: avgShift, avgFotWeek: avgFotWeek };
+    if (avgPeopleDay !== null || avgShift !== null || avgFotWeek !== null) {
+      out[key] = {
+        avgPeopleDay: avgPeopleDay,
+        avgShift: avgShift,
+        avgFotWeek: avgFotWeek
+      };
     }
   }
   return out;
